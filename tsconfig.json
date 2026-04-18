@@ -18,6 +18,8 @@
     "*.ts",
     "src/**/*.js",
     "scripts/**/*.mjs",
-    "tests/**/*.js"
+    "tests/**/*.js",
+    "vitest.config.mjs",
+    "vitest.workspace.mjs"
   ]
 }

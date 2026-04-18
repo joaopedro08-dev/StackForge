@@ -27,8 +27,8 @@ and this project follows Semantic Versioning.
   - prettier.config.cjs
   - tsconfig.json
   - turbo.json
-  - vitest.config.ts
-  - vitest.workspace.ts
+  - vitest.config.mjs
+  - vitest.workspace.mjs
   - .editorconfig
   - .prettierignore
 

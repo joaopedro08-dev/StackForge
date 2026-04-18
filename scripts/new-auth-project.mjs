@@ -29,8 +29,8 @@ const topLevelPathsToCopyByProfile = {
     'pnpm-lock.yaml',
     'prisma',
     'src',
-    'vitest.config.ts',
-    'vitest.workspace.ts',
+    'vitest.config.mjs',
+    'vitest.workspace.mjs',
   ],
   full: [
     '.dockerignore',
@@ -49,8 +49,8 @@ const topLevelPathsToCopyByProfile = {
     'prisma',
     'src',
     'tests',
-    'vitest.config.ts',
-    'vitest.workspace.ts',
+    'vitest.config.mjs',
+    'vitest.workspace.mjs',
   ],
 };
 
@@ -235,26 +235,31 @@ async function applyJavaScriptPreset(destinationProjectDir) {
 
   await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
 
-  const vitestConfigTsPath = path.join(destinationProjectDir, 'vitest.config.ts');
-  const vitestWorkspaceTsPath = path.join(destinationProjectDir, 'vitest.workspace.ts');
+  const vitestConfigMjsPath = path.join(destinationProjectDir, 'vitest.config.mjs');
+  const vitestWorkspaceMjsPath = path.join(destinationProjectDir, 'vitest.workspace.mjs');
 
-  const vitestConfigExists = await stat(vitestConfigTsPath).catch(() => null);
+  const vitestConfigExists = await stat(vitestConfigMjsPath).catch(() => null);
   if (vitestConfigExists?.isFile()) {
-    const vitestConfigRaw = await readFile(vitestConfigTsPath, 'utf8');
-    const vitestConfigMjs = vitestConfigRaw
-      .replace(/tests\/\*\*\/\*\.test\.ts/g, 'tests/**/*.test.js')
-      .replace(/tests\/\*\*\/\*\.test\.\{js,ts\}/g, 'tests/**/*.test.js');
+    const vitestConfigRaw = await readFile(vitestConfigMjsPath, 'utf8');
+    const vitestConfigUpdated = vitestConfigRaw.replace(/tests\/\*\*\/\*\.test\.\{js,ts\}/g, 'tests/**/*.test.js');
 
-    await writeFile(path.join(destinationProjectDir, 'vitest.config.mjs'), vitestConfigMjs, 'utf8');
+    if (vitestConfigUpdated !== vitestConfigRaw) {
+      await writeFile(vitestConfigMjsPath, vitestConfigUpdated, 'utf8');
+    }
   }
 
-  const vitestWorkspaceExists = await stat(vitestWorkspaceTsPath).catch(() => null);
+  const vitestWorkspaceExists = await stat(vitestWorkspaceMjsPath).catch(() => null);
   if (vitestWorkspaceExists?.isFile()) {
-    await writeFile(path.join(destinationProjectDir, 'vitest.workspace.mjs'), "export default ['./vitest.config.mjs'];\n", 'utf8');
+    const vitestWorkspaceRaw = await readFile(vitestWorkspaceMjsPath, 'utf8');
+    const vitestWorkspaceUpdated = vitestWorkspaceRaw.replace('./vitest.config.ts', './vitest.config.mjs');
+
+    if (vitestWorkspaceUpdated !== vitestWorkspaceRaw) {
+      await writeFile(vitestWorkspaceMjsPath, vitestWorkspaceUpdated, 'utf8');
+    }
   }
 
-  await removeFileIfExists(vitestConfigTsPath);
-  await removeFileIfExists(vitestWorkspaceTsPath);
+  await removeFileIfExists(path.join(destinationProjectDir, 'vitest.config.ts'));
+  await removeFileIfExists(path.join(destinationProjectDir, 'vitest.workspace.ts'));
   await removeFileIfExists(path.join(destinationProjectDir, 'tsconfig.json'));
 }
 
@@ -342,18 +347,30 @@ async function applyTypeScriptPreset(destinationProjectDir) {
 
   await writeFile(tsConfigPath, `${JSON.stringify(tsConfig, null, 2)}\n`, 'utf8');
 
-  const vitestConfigPath = path.join(destinationProjectDir, 'vitest.config.ts');
-  const vitestConfigStat = await stat(vitestConfigPath).catch(() => null);
+  const vitestConfigMjsPath = path.join(destinationProjectDir, 'vitest.config.mjs');
+  const vitestConfigTsPath = path.join(destinationProjectDir, 'vitest.config.ts');
+  const vitestConfigStat = await stat(vitestConfigMjsPath).catch(() => null);
 
   if (vitestConfigStat?.isFile()) {
-    const vitestConfigRaw = await readFile(vitestConfigPath, 'utf8');
+    const vitestConfigRaw = await readFile(vitestConfigMjsPath, 'utf8');
     const vitestConfigUpdated = vitestConfigRaw
       .replace("include: ['tests/**/*.test.js']", "include: ['tests/**/*.test.ts']")
       .replace("include: ['tests/**/*.test.{js,ts}']", "include: ['tests/**/*.test.ts']");
 
-    if (vitestConfigUpdated !== vitestConfigRaw) {
-      await writeFile(vitestConfigPath, vitestConfigUpdated, 'utf8');
-    }
+    await writeFile(vitestConfigTsPath, vitestConfigUpdated, 'utf8');
+    await removeFileIfExists(vitestConfigMjsPath);
+  }
+
+  const vitestWorkspaceMjsPath = path.join(destinationProjectDir, 'vitest.workspace.mjs');
+  const vitestWorkspaceTsPath = path.join(destinationProjectDir, 'vitest.workspace.ts');
+  const vitestWorkspaceStat = await stat(vitestWorkspaceMjsPath).catch(() => null);
+
+  if (vitestWorkspaceStat?.isFile()) {
+    const vitestWorkspaceRaw = await readFile(vitestWorkspaceMjsPath, 'utf8');
+    const vitestWorkspaceUpdated = vitestWorkspaceRaw.replace('./vitest.config.mjs', './vitest.config.ts');
+
+    await writeFile(vitestWorkspaceTsPath, vitestWorkspaceUpdated, 'utf8');
+    await removeFileIfExists(vitestWorkspaceMjsPath);
   }
 
   const eslintConfigJsPath = path.join(destinationProjectDir, 'eslint.config.js');

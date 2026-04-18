@@ -230,8 +230,8 @@ See `.env.example`:
 - Formatting: `prettier.config.cjs`
 - Type checking baseline: `tsconfig.json`
 - Monorepo-ready task graph: `turbo.json`
-- Vitest project config: `vitest.config.ts`
-- Vitest workspace config: `vitest.workspace.ts`
+- Vitest project config: `vitest.config.mjs`
+- Vitest workspace config: `vitest.workspace.mjs`
 
 ## License and Releases
 
