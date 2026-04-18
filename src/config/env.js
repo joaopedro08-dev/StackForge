@@ -4,8 +4,8 @@ import { z } from 'zod';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
-  CORS_ORIGIN: z.string().url().default('http://localhost:3000'),
-  CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
+  CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
+  CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:5173'),
   DATABASE_PROVIDER: z.enum(['json', 'mysql', 'postgresql', 'sqlite', 'sqlserver']).default('json'),
   DATABASE_URL: z.string().default(''),
   DB_PORT_MYSQL: z.coerce.number().int().nonnegative().default(3306),
