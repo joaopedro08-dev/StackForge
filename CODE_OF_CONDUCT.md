@@ -30,4 +30,4 @@ contributions that are not aligned with this policy.
 
 If you experience or witness unacceptable behavior, contact:
 
-- conduct@authforge.local
+- joao.p.mello.dev@gmail.com
