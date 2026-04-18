@@ -3,7 +3,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['node_modules/**', 'data/**', 'prisma/migrations/**'],
+    ignores: ['node_modules/**', 'data/**', 'prisma/migrations/**', 'web/**'],
   },
   js.configs.recommended,
   {
