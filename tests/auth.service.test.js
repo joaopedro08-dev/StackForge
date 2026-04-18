@@ -1,0 +1,230 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import jwt from 'jsonwebtoken';
+import { db } from '../src/db/database.js';
+import { env } from '../src/config/env.js';
+import {
+  getUserById,
+  login,
+  logout,
+  refreshSession,
+  register,
+  validateAccessToken,
+} from '../src/modules/auth/auth.service.js';
+import { HttpError } from '../src/utils/http-error.js';
+import {
+  resetTestDatabase,
+  seedExpiredRefreshToken,
+  seedTestUser,
+} from './helpers/auth-test-utils.js';
+
+const activeAccessSecret = env.JWT_ACCESS_KEYRING[env.JWT_ACCESS_ACTIVE_KID];
+
+describe('auth service', () => {
+  beforeEach(async () => {
+    await resetTestDatabase();
+  });
+
+  it('registers a new user and stores hashed credentials', async () => {
+    const result = await register({
+      name: 'John Silva',
+      email: 'JOHN@EMAIL.COM',
+      password: 'StrongPass123',
+      confirmPassword: 'StrongPass123',
+    });
+
+    expect(result.user.email).toBe('john@email.com');
+    expect(result.user).not.toHaveProperty('passwordHash');
+    expect(db.data.users).toHaveLength(1);
+    expect(db.data.refreshTokens).toHaveLength(1);
+    expect(db.data.users[0].passwordHash).not.toBe('StrongPass123');
+  });
+
+  it('rejects duplicate emails on register', async () => {
+    await seedTestUser();
+
+    await expect(
+      register({
+        name: 'John Silva',
+        email: 'john@email.com',
+        password: 'StrongPass123',
+        confirmPassword: 'StrongPass123',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'Email is already in use.',
+    });
+  });
+
+  it('logs in with valid credentials', async () => {
+    await seedTestUser();
+
+    const result = await login({
+      email: 'john@email.com',
+      password: 'StrongPass123',
+    });
+
+    expect(result.user.email).toBe('john@email.com');
+    expect(result.accessToken).toEqual(expect.any(String));
+    expect(result.refreshToken).toEqual(expect.any(String));
+    expect(db.data.refreshTokens).toHaveLength(1);
+  });
+
+  it('rejects login with invalid password', async () => {
+    await seedTestUser();
+
+    await expect(
+      login({
+        email: 'john@email.com',
+        password: 'WrongPass123',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Invalid email or password.',
+    });
+  });
+
+  it('refreshes session and rotates refresh token', async () => {
+    const user = await seedTestUser();
+    const firstLogin = await login({
+      email: user.email,
+      password: 'StrongPass123',
+    });
+
+    const refreshed = await refreshSession(firstLogin.refreshToken);
+
+    expect(refreshed.accessToken).toEqual(expect.any(String));
+    expect(refreshed.refreshToken).toEqual(expect.any(String));
+    expect(refreshed.refreshToken).not.toBe(firstLogin.refreshToken);
+    expect(db.data.refreshTokens).toHaveLength(2);
+    expect(db.data.refreshTokens[0].revokedAt).toEqual(expect.any(String));
+  });
+
+  it('rejects reuse of an old refresh token after rotation', async () => {
+    const user = await seedTestUser();
+    const firstLogin = await login({
+      email: user.email,
+      password: 'StrongPass123',
+    });
+
+    const rotatedSession = await refreshSession(firstLogin.refreshToken);
+
+    await expect(refreshSession(firstLogin.refreshToken)).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Refresh token reuse detected. Session revoked.',
+    });
+
+    await expect(refreshSession(rotatedSession.refreshToken)).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Refresh token reuse detected. Session revoked.',
+    });
+  });
+
+  it('rejects refresh session with expired token', async () => {
+    await seedTestUser();
+    const expiredToken = seedExpiredRefreshToken('user-1');
+
+    await expect(refreshSession(expiredToken)).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Invalid refresh token.',
+    });
+  });
+
+  it('rejects refresh session when the user no longer exists', async () => {
+    const user = await seedTestUser();
+    const firstLogin = await login({
+      email: user.email,
+      password: 'StrongPass123',
+    });
+
+    db.data.users = [];
+
+    await expect(refreshSession(firstLogin.refreshToken)).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Invalid refresh token.',
+    });
+    expect(db.data.refreshTokens[0].revokedAt).toEqual(expect.any(String));
+  });
+
+  it('logs out and revokes the refresh token', async () => {
+    const user = await seedTestUser();
+    const firstLogin = await login({
+      email: user.email,
+      password: 'StrongPass123',
+    });
+
+    await logout(firstLogin.refreshToken);
+
+    expect(db.data.refreshTokens[0].revokedAt).toEqual(expect.any(String));
+  });
+
+  it('rejects logout without token', async () => {
+    await expect(logout()).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Unable to end the session. Please log in again.',
+    });
+  });
+
+  it('validates access tokens generated by the service', async () => {
+    const user = await seedTestUser();
+    const loggedIn = await login({
+      email: user.email,
+      password: 'StrongPass123',
+    });
+
+    const payload = validateAccessToken(loggedIn.accessToken);
+
+    expect(payload).toMatchObject({
+      userId: user.id,
+      email: user.email,
+    });
+  });
+
+  it('rejects invalid access tokens', () => {
+    const invalidToken = jwt.sign(
+      {
+        sub: 'user-1',
+        email: 'john@email.com',
+        type: 'refresh',
+      },
+      activeAccessSecret,
+      {
+        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
+      },
+    );
+
+    expect(() => validateAccessToken(invalidToken)).toThrowError(HttpError);
+  });
+
+  it('rejects malformed access tokens', () => {
+    expect(() => validateAccessToken('not-a-jwt-token')).toThrowError(HttpError);
+  });
+
+  it('rejects expired access tokens', () => {
+    const expiredToken = jwt.sign(
+      {
+        sub: 'user-1',
+        email: 'john@email.com',
+        type: 'access',
+      },
+      activeAccessSecret,
+      {
+        expiresIn: '-1s',
+      },
+    );
+
+    expect(() => validateAccessToken(expiredToken)).toThrowError(HttpError);
+  });
+
+  it('gets user by id', async () => {
+    const user = await seedTestUser();
+
+    await expect(getUserById(user.id)).resolves.toMatchObject({
+      id: user.id,
+      email: user.email,
+    });
+  });
+
+  it('throws when user is not found', async () => {
+    await expect(getUserById('missing-user')).rejects.toThrowError(HttpError);
+  });
+});

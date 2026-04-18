@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @db.Uuid
+  name          String
+  email         String         @unique
+  passwordHash  String
+  createdAt     DateTime
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model LoginAttempt {
+  id          String    @id @db.Uuid
+  ipAddress   String
+  email       String
+  failCount   Int
+  lockLevel   Int
+  windowStart DateTime
+  blockedUntil DateTime?
+  lastFailedAt DateTime
+
+  @@unique([ipAddress, email])
+  @@index([blockedUntil])
+  @@map("login_attempts")
+}
+
+model RefreshToken {
+  id        String   @id @db.Uuid
+  userId    String   @db.Uuid
+  familyId  String   @db.Uuid
+  tokenHash String   @unique
+  createdAt DateTime
+  expiresAt DateTime
+  revokedAt DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
