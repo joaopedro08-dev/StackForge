@@ -216,7 +216,7 @@ async function main() {
     process.stdout.write(`[smoke] full-runtime mode=${runtimeMode} scenarios=${selectedScenarios.length}\n`);
 
     for (const scenario of selectedScenarios) {
-      const projectName = `${path.basename(runDir)}-${scenario.name}`;
+      const projectName = `${path.basename(runDir)}-${scenario.name}`.toLowerCase();
       const projectDir = path.join(projectsRootDir, projectName);
       const startedAt = Date.now();
       const scenarioEnv = { ...process.env };
