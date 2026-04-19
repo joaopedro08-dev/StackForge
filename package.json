@@ -22,7 +22,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push --skip-generate",
-    "prisma:bootstrap": "pnpm prisma:push",
+    "prisma:bootstrap": "node scripts/prisma-bootstrap.mjs",
     "lint": "eslint . --max-warnings=0",
     "audit": "pnpm audit --audit-level=high",
     "prod:up": "docker compose --env-file .env.production -f docker-compose.production.yml up -d",
