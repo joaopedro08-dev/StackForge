@@ -150,12 +150,8 @@ async function removeDirIfEmpty(dirPath) {
 
 export async function normalizeGeneratedMvcStructure(destinationProjectDir) {
   const srcDir = path.join(destinationProjectDir, 'src');
-  const controllersDir = path.join(srcDir, 'controllers');
   const configDir = path.join(srcDir, 'config');
-  const middlewaresDir = path.join(srcDir, 'middlewares');
-  const utilsDir = path.join(srcDir, 'utils');
   const docsDir = path.join(srcDir, 'docs');
-  const routesDir = path.join(srcDir, 'routes');
   const modulesDir = path.join(srcDir, 'modules');
 
   // For MVC, keep middlewares, routes, and utils folders

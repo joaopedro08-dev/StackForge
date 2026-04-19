@@ -3,8 +3,6 @@ import { readFile, stat, writeFile } from 'node:fs/promises';
 
 const summaryStartMarker = '<!-- generated-project-summary:start -->';
 const summaryEndMarker = '<!-- generated-project-summary:end -->';
-const titleMarker = '<!-- generated-title:start -->';
-const titleEndMarker = '<!-- generated-title:end -->';
 
 function removeGeneratedSection(readmeContent, startMarker, endMarker) {
   const startIndex = readmeContent.indexOf(startMarker);
