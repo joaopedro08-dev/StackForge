@@ -32,6 +32,8 @@ function resolveOpenApiDocument() {
   return clonedDocument;
 }
 
+const corsAllowedOrigins = new Set(env.CORS_ALLOWED_ORIGINS);
+
 const corsOptions = {
   origin(origin, callback) {
     // Requests without Origin (curl, server-to-server) do not require CORS.
@@ -40,9 +42,12 @@ const corsOptions = {
       return;
     }
 
-    callback(null, env.CORS_ALLOWED_ORIGINS.includes(origin));
+    callback(null, corsAllowedOrigins.has(origin));
   },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-Id'],
   credentials: true,
+  maxAge: 600,
   optionsSuccessStatus: 204,
   preflightContinue: false,
 };
@@ -69,7 +74,7 @@ app.use((req, res, next) => {
       return;
     }
 
-    if (req.headers.origin && env.CORS_ALLOWED_ORIGINS.includes(req.headers.origin)) {
+    if (req.headers.origin && corsAllowedOrigins.has(req.headers.origin)) {
       res.sendStatus(204);
       return;
     }

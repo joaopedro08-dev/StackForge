@@ -154,7 +154,16 @@ export function App() {
 
       setResultOutput(`${t.downloadStarted}: ${safeProjectName}.zip`)
     } catch (error) {
-      setResultError(error instanceof Error ? error.message : t.unexpectedDownloadError)
+      const errorMessage = error instanceof Error ? error.message : ""
+      const isNetworkFailure =
+        error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(errorMessage)
+
+      if (isNetworkFailure) {
+        setResultError(`${t.generateDownloadFailed} ${t.renderSleepNotice}`)
+        return
+      }
+
+      setResultError(errorMessage || t.unexpectedDownloadError)
     } finally {
       setIsGenerating(false)
     }

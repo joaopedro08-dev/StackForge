@@ -45,6 +45,7 @@ export type InitializrCopy = {
   invalidDownloadResponse: string
   downloadFileFailed: string
   unexpectedDownloadError: string
+  renderSleepNotice: string
   cleanupDownloads: string
   cleaningDownloads: string
   cleanupDownloadsFailed: string
