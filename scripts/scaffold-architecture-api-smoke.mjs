@@ -167,7 +167,7 @@ async function main() {
   try {
     for (const scenario of scenarios) {
       const label = scenarioLabel(scenario);
-      const projectName = `${path.basename(runDir)}-${scenario.architecture}-${scenario.apiStyle}-${scenario.database}-${scenario.language}`;
+      const projectName = `${path.basename(runDir)}-${scenario.architecture}-${scenario.apiStyle}-${scenario.database}-${scenario.language}`.toLowerCase();
       const projectDir = path.join(projectsRootDir, projectName);
       const startedAt = Date.now();
 

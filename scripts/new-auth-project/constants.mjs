@@ -67,5 +67,6 @@ export const nestedIgnorePaths = new Set([
   path.normalize('.git'),
   path.normalize('data'),
   path.normalize('tests/downloads-manager.test.js'),
+  path.normalize('tests/openapi.test.js'),
   path.normalize('tests/scripts'),
 ]);

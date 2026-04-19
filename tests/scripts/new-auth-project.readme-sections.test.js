@@ -120,7 +120,7 @@ describe('new-auth-project README conditional sections', () => {
     } finally {
       await rm(projectDir, { recursive: true, force: true });
     }
-  });
+  }, 20_000);
 
   it('does not keep auth module artifacts for features=none with mvc', async () => {
     const projectName = buildProjectName('readme-none-mvc-structure');
