@@ -265,7 +265,7 @@ async function main() {
                     const invocation = pnpmInvocation();
                     return {
                       command: invocation.command,
-                      args: [...invocation.args, 'install'],
+                      args: [...invocation.args, 'install', '--no-frozen-lockfile'],
                     };
                   })();
         await runInstallWithRetry(
