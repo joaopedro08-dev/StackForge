@@ -149,10 +149,10 @@ describe('new-auth-project README conditional sections', () => {
       const configDirStat = await stat(path.join(projectDir, 'src', 'config')).catch(() => null);
       const openApiInConfigStat = await stat(path.join(projectDir, 'src', 'config', 'openapi.js')).catch(() => null);
 
-      expect(middlewaresDirStat).toBeNull();
-      expect(utilsDirStat).toBeNull();
+      expect(middlewaresDirStat?.isDirectory()).toBe(true);
+      expect(utilsDirStat?.isDirectory()).toBe(true);
       expect(docsDirStat).toBeNull();
-      expect(routesDirStat).toBeNull();
+      expect(routesDirStat?.isDirectory()).toBe(true);
       expect(modulesDirStat).toBeNull();
       expect(controllersDirStat?.isDirectory()).toBe(true);
       expect(configDirStat?.isDirectory()).toBe(true);
@@ -172,13 +172,13 @@ describe('new-auth-project README conditional sections', () => {
         env: process.env,
       });
 
-      const expectedFolders = ['config', 'controllers', 'db', 'models', 'views'];
+      const expectedFolders = ['config', 'controllers', 'db', 'middlewares', 'models', 'routes', 'utils', 'views'];
       for (const folderName of expectedFolders) {
         const folderStat = await stat(path.join(projectDir, 'src', folderName)).catch(() => null);
         expect(folderStat?.isDirectory()).toBe(true);
       }
 
-      const forbiddenFolders = ['modules', 'routes', 'docs', 'middlewares', 'utils'];
+      const forbiddenFolders = ['modules', 'docs'];
       for (const folderName of forbiddenFolders) {
         const folderStat = await stat(path.join(projectDir, 'src', folderName)).catch(() => null);
         expect(folderStat).toBeNull();
