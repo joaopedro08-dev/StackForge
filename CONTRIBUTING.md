@@ -25,7 +25,7 @@ Before opening a pull request, run:
 pnpm lint
 ```
 ```pnpm
-pnpm lint
+pnpm test
 ```
 ```pnpm
 pnpm audit
