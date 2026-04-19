@@ -1,11 +1,6 @@
 import process from 'node:process';
 import { spawn } from 'node:child_process';
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
+import { setTimeout as sleep } from 'node:timers/promises';
 
 function resolvePnpmInvocation() {
   const execPath = process.env.npm_execpath;
