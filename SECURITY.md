@@ -11,7 +11,7 @@ Please do not disclose vulnerabilities publicly before a fix is available.
 
 Report security issues by emailing:
 
-- security@authforge.local
+- security@stackforge.local
 
 Include as much detail as possible:
 

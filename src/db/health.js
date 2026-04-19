@@ -12,6 +12,10 @@ async function checkPostgreSQLProvider() {
   return true;
 }
 
+function isRelationalProvider(provider) {
+  return ['postgresql', 'mysql', 'sqlite', 'sqlserver'].includes(provider);
+}
+
 export async function checkDatabaseReadiness() {
   try {
     if (env.DATABASE_PROVIDER === 'json') {
@@ -21,10 +25,10 @@ export async function checkDatabaseReadiness() {
       };
     }
 
-    if (env.DATABASE_PROVIDER === 'postgresql') {
+    if (isRelationalProvider(env.DATABASE_PROVIDER)) {
       return {
         ok: await checkPostgreSQLProvider(),
-        provider: 'postgresql',
+        provider: env.DATABASE_PROVIDER,
       };
     }
 

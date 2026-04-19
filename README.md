@@ -1,4 +1,4 @@
-# AuthForge
+# StackForge
 
 Modern SaaS authentication API built with Node.js + Express, including:
 
@@ -30,7 +30,7 @@ pnpm install
 2. Create `.env` from the example:
 
 ```bash
-copy .env.example .env
+node -e "require('node:fs').copyFileSync('.env.example', '.env')"
 ```
 
 3. Start development:
@@ -67,6 +67,20 @@ pnpm dev:new-project -- your-api-name --full
 pnpm dev:new-project -- your-api-name --lang=typescript
 pnpm dev:new-project -- your-api-name --ts
 pnpm dev:new-project -- your-api-name --full --lang=typescript
+pnpm dev:new-project -- your-api-name --db=mysql
+pnpm dev:new-project -- your-api-name --db=sqlite
+pnpm dev:new-project -- your-api-name --db=sqlserver
+pnpm dev:new-project -- your-api-name --db=json
+pnpm dev:new-project -- your-api-name --architecture=mvc
+pnpm dev:new-project -- your-api-name --architecture=clean
+pnpm dev:new-project -- your-api-name --api=graphql
+pnpm dev:new-project -- your-api-name --api=hybrid
+pnpm dev:new-project -- your-api-name --pm=npm
+pnpm dev:new-project -- your-api-name --pm=yarn
+pnpm dev:new-project -- your-api-name --pm=bun
+pnpm dev:new-project -- your-api-name --features=both
+pnpm dev:new-project -- your-api-name --features=none
+pnpm dev:new-project -- --interactive
 ```
 
 When using `--lang=typescript`, the generated project uses `.ts` files for core application code and keeps the scaffold lean by omitting the `scripts` folder.
@@ -76,6 +90,46 @@ Generation guarantees:
 - `--lang=javascript`: generates runtime files in JavaScript (`index.js`, `src/**/*.js`) with Vitest config in `.mjs` and no TypeScript project artifacts.
 - `--lang=typescript`: generates runtime files in TypeScript (`index.ts`, `src/**/*.ts`) with imports aligned to TS and runtime start compatible with Docker (`pnpm start`).
 - Docker startup stays language-agnostic through `pnpm start`, preventing hardcoded `index.js` drift.
+
+Database options:
+
+- `--db=json`: local JSON database (no Prisma dependencies in generated project)
+- `--db=postgresql|mysql|sqlite|sqlserver`: relational mode with Prisma configured for selected provider
+
+Architecture options:
+
+- `--architecture=layered`: layered modules/repositories flow (default)
+- `--architecture=mvc`: generates `config`, `controllers`, `db`, `middlewares`, `models`, `routes`, `utils`, and `views` under `src/` and adds the MVC architecture guide
+- `--architecture=clean`: adds clean architecture folders and guide
+
+API style options:
+
+- `--api=rest`: REST endpoints only (default)
+- `--api=graphql`: GraphQL endpoint scaffold (`/graphql`)
+- `--api=hybrid`: REST + GraphQL together
+
+Package manager options:
+
+- `--pm=pnpm`: keep pnpm commands and lockfile (default)
+- `--pm=npm`: rewrite generated commands/scripts for npm usage
+- `--pm=yarn`: rewrite generated commands/scripts for yarn usage
+- `--pm=bun`: rewrite generated commands/scripts for bun usage
+
+Runtime smoke note:
+
+- `yarn` smoke runs through `corepack` when available.
+- `bun` smoke requires bun runtime support in the environment and is skipped when unavailable.
+
+Feature set options:
+
+- `--features=auth`: authentication scaffold only (default)
+- `--features=email`: email configuration scaffold only
+- `--features=both`: authentication + email configuration
+- `--features=none`: only health/docs baseline (without auth routes)
+
+Scaffold maintenance route:
+
+- `DELETE /api/scaffold/projects/downloads`: removes generated download artifacts from the server
 
 Modern auth baseline in generated projects:
 
@@ -135,6 +189,32 @@ Minimum checklist before deployment:
 - use `DATABASE_PROVIDER=postgresql` with a real `DATABASE_URL`
 - restrict `CORS_ALLOWED_ORIGINS` to real frontend domains
 - run behind HTTPS/reverse proxy
+
+### Railway + Vercel
+
+Backend (Railway):
+
+- Deploy from repository root.
+- Start command: `pnpm start`
+- Required variables:
+  - `NODE_ENV=production`
+  - `PORT` (provided by Railway)
+  - `DATABASE_PROVIDER=postgresql`
+  - `DATABASE_URL=<railway postgres url>`
+  - `JWT_ACCESS_ACTIVE_KID=v1`
+  - `JWT_ACCESS_SECRETS=v1:<strong-secret>`
+  - `JWT_ACCESS_SECRET=<strong-secret>`
+  - `CORS_ORIGIN=https://your-web-name.vercel.app`
+  - `CORS_ALLOWED_ORIGINS=https://your-web-name.vercel.app`
+
+Frontend (Vercel):
+
+- Root directory: `web`
+- Framework preset: Vite
+- Build command: `npm run build`
+- Output directory: `dist`
+- Required variable:
+  - `VITE_API_BASE_URL=https://your-api-name.up.railway.app`
 
 ### Deploy with Docker Compose
 

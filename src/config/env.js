@@ -25,6 +25,20 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(16).default('change-this-access-secret-please'),
   ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  EMAIL_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  EMAIL_PROVIDER: z.enum(['none', 'smtp']).default('none'),
+  EMAIL_FROM: z.string().email().default('no-reply@example.com'),
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASSWORD: z.string().default(''),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

@@ -2,6 +2,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
+import path from 'node:path';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env.js';
 import { checkDatabaseReadiness } from './db/health.js';
@@ -10,8 +11,26 @@ import { errorHandler, notFoundHandler } from './middlewares/error.middleware.js
 import { requestContextMiddleware } from './middlewares/request-context.middleware.js';
 import { authRateLimiter } from './middlewares/rate-limit.middleware.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { emailRouter } from './modules/email/email.routes.js';
+import { scaffoldRouter } from './modules/scaffold/scaffold.routes.js';
+import { initializeDownloadsManager } from './modules/scaffold/downloads-manager.js';
 
 const app = express();
+
+// Initialize downloads manager
+const downloadsDir = path.resolve(process.cwd(), 'web', 'public', 'downloads');
+initializeDownloadsManager(downloadsDir);
+app.locals.downloadsDir = downloadsDir;
+
+function resolveOpenApiDocument() {
+  if (env.EMAIL_ENABLED) {
+    return openApiDocument;
+  }
+
+  const clonedDocument = structuredClone(openApiDocument);
+  delete clonedDocument.paths['/email/send'];
+  return clonedDocument;
+}
 
 const corsOptions = {
   origin(origin, callback) {
@@ -64,7 +83,7 @@ app.get('/health/liveness', (_req, res) => {
 });
 
 app.get('/openapi.json', (_req, res) => {
-  res.status(200).json(openApiDocument);
+  res.status(200).json(resolveOpenApiDocument());
 });
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
@@ -110,6 +129,12 @@ app.get('/health', async (_req, res) => {
 });
 
 app.use('/auth', authRateLimiter, authRouter);
+
+if (env.EMAIL_ENABLED) {
+  app.use('/email', emailRouter);
+}
+
+app.use('/api/scaffold', scaffoldRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

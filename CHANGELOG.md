@@ -9,7 +9,7 @@ and this project follows Semantic Versioning.
 
 ### Added
 
-- AuthForge branding across project metadata and docs.
+- StackForge branding across project metadata and docs.
 - Professional repository standards:
   - CONTRIBUTING.md
   - SECURITY.md

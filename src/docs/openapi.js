@@ -1,9 +1,9 @@
 export const openApiDocument = {
   openapi: '3.1.0',
   info: {
-    title: 'AuthForge API',
+    title: 'StackForge API',
     version: '1.0.0',
-    description: 'AuthForge SaaS authentication API with register, login, session, refresh token and logout.',
+    description: 'StackForge SaaS authentication API with register, login, session, refresh token and logout.',
   },
   servers: [
     {
@@ -322,6 +322,90 @@ export const openApiDocument = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/email/send': {
+      post: {
+        summary: 'Send an email using configured SMTP provider',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  to: { type: 'string', format: 'email' },
+                  subject: { type: 'string' },
+                  text: { type: 'string' },
+                  html: { type: 'string' },
+                },
+                required: ['to', 'subject', 'text'],
+              },
+            },
+          },
+        },
+        responses: {
+          202: {
+            description: 'Email queued for delivery',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    delivery: {
+                      type: 'object',
+                      properties: {
+                        messageId: { type: 'string' },
+                        accepted: { type: 'array', items: { type: 'string' } },
+                        rejected: { type: 'array', items: { type: 'string' } },
+                      },
+                    },
+                  },
+                  required: ['message', 'delivery'],
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Email provider disabled or invalid payload',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          500: {
+            description: 'SMTP configuration or transport error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/scaffold/projects/downloads': {
+      delete: {
+        summary: 'Remove all generated scaffold downloads',
+        responses: {
+          200: {
+            description: 'Downloads cleaned successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    deletedCount: { type: 'integer' },
+                  },
+                  required: ['message', 'deletedCount'],
+                },
               },
             },
           },

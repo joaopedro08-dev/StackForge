@@ -6,8 +6,8 @@ function clone(value) {
   return structuredClone(value);
 }
 
-function isPostgreSQLProvider() {
-  return env.DATABASE_PROVIDER === 'postgresql';
+function isRelationalProvider() {
+  return ['postgresql', 'mysql', 'sqlite', 'sqlserver'].includes(env.DATABASE_PROVIDER);
 }
 
 function isJsonProvider() {
@@ -15,12 +15,12 @@ function isJsonProvider() {
 }
 
 function ensureSupportedProvider() {
-  if (isPostgreSQLProvider() || isJsonProvider()) {
+  if (isRelationalProvider() || isJsonProvider()) {
     return;
   }
 
   throw new Error(
-    `Database provider "${env.DATABASE_PROVIDER}" is not implemented yet. Use "json" or "postgresql".`,
+    `Database provider "${env.DATABASE_PROVIDER}" is not implemented yet. Use "json", "postgresql", "mysql", "sqlite" or "sqlserver".`,
   );
 }
 
@@ -74,7 +74,7 @@ function mapLoginAttempt(loginAttempt) {
 export async function findUserByEmail(email) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     const user = await prisma.user.findUnique({
       where: { email },
@@ -89,7 +89,7 @@ export async function findUserByEmail(email) {
 export async function findUserById(userId) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -104,7 +104,7 @@ export async function findUserById(userId) {
 export async function createUser(user) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     await prisma.user.create({
       data: {
@@ -125,7 +125,7 @@ export async function createUser(user) {
 export async function createRefreshToken(refreshToken) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     await prisma.refreshToken.create({
       data: {
@@ -150,7 +150,7 @@ export async function findActiveRefreshTokenByHash(tokenHash) {
 
   const now = new Date();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     const refreshToken = await prisma.refreshToken.findFirst({
       where: {
@@ -178,7 +178,7 @@ export async function findActiveRefreshTokenByHash(tokenHash) {
 export async function revokeRefreshToken(tokenHash, revokedAt) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     const tokenRecord = await prisma.refreshToken.findUnique({
       where: {
@@ -215,7 +215,7 @@ export async function revokeRefreshToken(tokenHash, revokedAt) {
 export async function findRefreshTokenByHash(tokenHash) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     const refreshToken = await prisma.refreshToken.findUnique({
       where: {
@@ -232,7 +232,7 @@ export async function findRefreshTokenByHash(tokenHash) {
 export async function revokeRefreshTokenFamily(familyId, revokedAt) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     await prisma.refreshToken.updateMany({
       where: {
@@ -257,7 +257,7 @@ export async function revokeRefreshTokenFamily(familyId, revokedAt) {
 export async function writeDatabase() {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     return;
   }
 
@@ -267,7 +267,7 @@ export async function writeDatabase() {
 export async function findLoginAttempt(ipAddress, email) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     const attempt = await prisma.loginAttempt.findUnique({
       where: {
@@ -289,7 +289,7 @@ export async function findLoginAttempt(ipAddress, email) {
 export async function upsertLoginAttempt(loginAttempt) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     const attempt = await prisma.loginAttempt.upsert({
       where: {
@@ -336,7 +336,7 @@ export async function upsertLoginAttempt(loginAttempt) {
 export async function deleteLoginAttempt(ipAddress, email) {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     await prisma.loginAttempt.deleteMany({
       where: {
@@ -356,7 +356,7 @@ export async function deleteLoginAttempt(ipAddress, email) {
 export async function clearAllLoginAttempts() {
   ensureSupportedProvider();
 
-  if (isPostgreSQLProvider()) {
+  if (isRelationalProvider()) {
     const prisma = await getPrismaClient();
     await prisma.loginAttempt.deleteMany();
     return;

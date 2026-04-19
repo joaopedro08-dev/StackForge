@@ -5,3 +5,6 @@ node_modules
 data/db.json
 .turbo
 /.vscode
+web/public/downloads
+developers/projects/*
+!developers/projects/.gitkeep

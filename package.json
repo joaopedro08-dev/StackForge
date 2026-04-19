@@ -1,8 +1,8 @@
 {
-  "name": "authforge",
+  "name": "stackforge",
   "version": "1.0.0",
   "private": true,
-  "description": "AuthForge SaaS authentication API with register, login, me, refresh-token and logout.",
+  "description": "StackForge SaaS authentication API with register, login, me, refresh-token and logout.",
   "main": "index.js",
   "scripts": {
     "dev:new-project": "node scripts/new-auth-project.mjs",
@@ -13,6 +13,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run tests/integration",
+    "test:scaffold:readme": "vitest run tests/scripts/new-auth-project.readme-sections.test.js",
+    "test:scaffold:db": "node scripts/scaffold-db-smoke.mjs",
+    "test:scaffold:arch-api": "node scripts/scaffold-architecture-api-smoke.mjs",
+    "test:scaffold:full-runtime": "node scripts/scaffold-full-runtime-smoke.mjs",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -54,6 +58,7 @@
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

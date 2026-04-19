@@ -1,20 +1,11 @@
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
-
-const fetchApi = globalThis.fetch;
-const consoleApi = globalThis.console;
-
-if (typeof fetchApi !== 'function') {
-  throw new Error('Fetch API is not available in the current Node.js runtime.');
-}
-
-if (!consoleApi) {
-  throw new Error('Console API is not available in the current Node.js runtime.');
-}
+import { getJson } from './production/core/http.mjs';
+import { consoleApi, parseIntEnv, runWithExitCode } from './production/core/runtime.mjs';
 
 const BASE_URL = process.env.PROD_BASE_URL || 'http://localhost:3001';
-const RETRIES = Number.parseInt(process.env.PROD_SMOKE_RETRIES || '12', 10);
-const DELAY_MS = Number.parseInt(process.env.PROD_SMOKE_DELAY_MS || '2000', 10);
+const RETRIES = parseIntEnv('PROD_SMOKE_RETRIES', 12);
+const DELAY_MS = parseIntEnv('PROD_SMOKE_DELAY_MS', 2000);
 
 const endpoints = [
   {
@@ -28,21 +19,6 @@ const endpoints = [
     validate: (payload) => payload?.status === 'ok' && payload?.checks?.database?.ok === true,
   },
 ];
-
-async function getJson(url) {
-  const response = await fetchApi(url, {
-    method: 'GET',
-    headers: {
-      accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
 
 async function probeWithRetry(endpoint) {
   const url = `${BASE_URL}${endpoint.path}`;
@@ -81,7 +57,4 @@ async function main() {
   consoleApi.log('[done] production smoke test completed successfully');
 }
 
-main().catch((error) => {
-  consoleApi.error(`[error] ${error.message}`);
-  process.exitCode = 1;
-});
+runWithExitCode(main);

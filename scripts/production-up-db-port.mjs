@@ -1,74 +1,10 @@
-import { spawn } from 'node:child_process';
 import console from 'node:console';
 import process from 'node:process';
-
-const defaultDbPort = process.env.POSTGRES_HOST_PORT || '55432';
-
-function parseArgs(args) {
-  const options = {
-    dbPort: defaultDbPort,
-    skipSmoke: false,
-    build: false,
-  };
-
-  for (const arg of args) {
-    if (!arg || arg === '--') {
-      continue;
-    }
-
-    if (arg === '--skip-smoke') {
-      options.skipSmoke = true;
-      continue;
-    }
-
-    if (arg === '--build') {
-      options.build = true;
-      continue;
-    }
-
-    if (arg.startsWith('--db-port=')) {
-      options.dbPort = arg.slice('--db-port='.length).trim();
-      continue;
-    }
-
-    if (/^\d+$/.test(arg)) {
-      options.dbPort = arg;
-      continue;
-    }
-
-    throw new Error(`Invalid argument: ${arg}`);
-  }
-
-  if (!/^\d+$/.test(options.dbPort)) {
-    throw new Error('Database port must be numeric.');
-  }
-
-  return options;
-}
-
-function runCommand(command, args, env) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      stdio: 'inherit',
-      shell: false,
-      env,
-    });
-
-    child.on('error', reject);
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-
-      reject(new Error(`Command failed (${command} ${args.join(' ')}) with exit code ${code}`));
-    });
-  });
-}
+import { runCommand } from './production/core/process-runner.mjs';
+import { parseUpArgs } from './production/core/up-options.mjs';
 
 async function main() {
-  const { dbPort, skipSmoke, build } = parseArgs(process.argv.slice(2));
+  const { dbPort, skipSmoke, build } = parseUpArgs(process.argv.slice(2));
   const env = {
     ...process.env,
     POSTGRES_HOST_PORT: dbPort,

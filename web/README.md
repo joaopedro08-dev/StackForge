@@ -1,21 +1,44 @@
-# React + TypeScript + Vite + shadcn/ui
+# StackForge Web Initializr
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+Frontend for generating and downloading scaffolded StackForge projects as ZIP files.
 
-## Adding components
+## Environment
 
-To add components to your app, run the following command:
+The frontend uses `VITE_API_BASE_URL` to call the backend API.
+
+Local development (`web/.env.local`):
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+Production (Railway API):
+
+```env
+VITE_API_BASE_URL=https://your-api-name.up.railway.app
+```
+
+You can start from:
+
+- `web/.env.example`
+- `web/.env.production.example`
+
+## Run
 
 ```bash
-npx shadcn@latest add button
+pnpm --dir web dev
 ```
 
-This will place the ui components in the `src/components` directory.
+The page will call:
 
-## Using components
+`{VITE_API_BASE_URL}/api/scaffold/projects/download`
 
-To use the components in your app, import them as follows:
+## Deploy
 
-```tsx
-import { Button } from "@/components/ui/button"
-```
+Vercel:
+
+- Framework preset: Vite
+- Root directory: `web`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Environment variable: `VITE_API_BASE_URL=https://your-api-name.up.railway.app`

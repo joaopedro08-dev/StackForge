@@ -1,0 +1,7 @@
+{
+  "ignore": [
+    "developers/projects/**",
+    "web/public/downloads/**",
+    "data/**"
+  ]
+}

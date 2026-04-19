@@ -59,6 +59,71 @@ Examples:
 pnpm dev:new-project -- your-api-name --lang=typescript
 pnpm dev:new-project -- your-api-name --ts
 pnpm dev:new-project -- your-api-name --full --lang=typescript
+pnpm dev:new-project -- your-api-name --db=mysql
+pnpm dev:new-project -- your-api-name --db=sqlite
+pnpm dev:new-project -- your-api-name --db=sqlserver
+pnpm dev:new-project -- your-api-name --db=json
+pnpm dev:new-project -- your-api-name --architecture=mvc
+pnpm dev:new-project -- your-api-name --architecture=clean
+pnpm dev:new-project -- your-api-name --api=graphql
+pnpm dev:new-project -- your-api-name --api=hybrid
+pnpm dev:new-project -- your-api-name --pm=npm
+pnpm dev:new-project -- your-api-name --pm=yarn
+pnpm dev:new-project -- your-api-name --pm=bun
+pnpm dev:new-project -- --interactive
+```
+
+### Package Manager
+
+- Default: `pnpm`
+- Optional: `npm`, `yarn`, `bun`
+
+Examples:
+
+```bash
+pnpm dev:new-project -- your-api-name --pm=npm
+pnpm dev:new-project -- your-api-name --pm=yarn
+pnpm dev:new-project -- your-api-name --pm=bun
+```
+
+Smoke validation note:
+
+- `yarn` scenarios run via `corepack` when available.
+- `bun` scenarios require bun runtime support and are skipped when unavailable.
+
+### Database Provider
+
+- Default: `json` (no Prisma dependency in generated project)
+- Relational via Prisma: `postgresql`, `mysql`, `sqlite`, `sqlserver`
+
+Example:
+
+```bash
+pnpm dev:new-project -- your-api-name --db=postgresql
+```
+
+### Architecture
+
+- Default: `layered`
+- Optional: `mvc`, `clean`
+
+Examples:
+
+```bash
+pnpm dev:new-project -- your-api-name --architecture=mvc
+pnpm dev:new-project -- your-api-name --architecture=clean
+```
+
+### API Style
+
+- Default: `rest`
+- Optional: `graphql`, `hybrid`
+
+Examples:
+
+```bash
+pnpm dev:new-project -- your-api-name --api=graphql
+pnpm dev:new-project -- your-api-name --api=hybrid
 ```
 
 ## First Start for the Generated Project
@@ -66,12 +131,18 @@ pnpm dev:new-project -- your-api-name --full --lang=typescript
 ```bash
 cd developers/projects/your-api-name
 pnpm install
-copy .env.example .env
+node -e "require('node:fs').copyFileSync('.env.example', '.env')"
 pnpm dev
 ```
+
+If you generated with another package manager, replace commands accordingly (for example `npm install`, `yarn install`, or `bun install`).
 
 ## Team Conventions
 
 - Use kebab-case for project folder names.
 - Keep `.env` files out of version control.
 - Run `pnpm lint` and `pnpm test` before opening a PR.
+
+## Improvement Backlog
+
+- Scaffold and runtime roadmap: `developers/scaffold-improvements.md`

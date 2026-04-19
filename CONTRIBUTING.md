@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in improving AuthForge.
+Thanks for your interest in improving StackForge.
 
 ## Development Setup
 

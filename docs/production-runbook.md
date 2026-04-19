@@ -1,6 +1,6 @@
 # Production Runbook
 
-This runbook covers production operations for AuthForge.
+This runbook covers production operations for StackForge.
 Use it as an executable checklist for deployment, security, and continuity.
 
 ## 1. Secrets Preparation
