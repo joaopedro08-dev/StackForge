@@ -5,19 +5,31 @@ Thanks for your interest in improving StackForge.
 ## Development Setup
 
 1. Install dependencies:
-   - pnpm install
+```pnpm
+pnpm install
+```
 2. Create local environment:
-   - copy .env.example .env
+```env
+copy .env.example .env
+```
 3. Start in development:
-   - pnpm dev
+```pnpm
+pnpm dev
+```
 
 ## Quality Gates
 
 Before opening a pull request, run:
 
-- pnpm lint
-- pnpm test
-- pnpm audit
+```pnpm
+pnpm lint
+```
+```pnpm
+pnpm lint
+```
+```pnpm
+pnpm audit
+```
 
 ## Branch Naming
 

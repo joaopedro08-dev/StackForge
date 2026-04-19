@@ -104,7 +104,7 @@ async function main() {
 
   try {
     for (const provider of providers) {
-      const projectName = `${path.basename(runDir)}-${provider}`;
+      const projectName = `${path.basename(runDir)}-${provider}`.toLowerCase();
       const projectDir = path.join(projectsRootDir, projectName);
       generatedProjectNames.push(projectName);
       const startedAt = Date.now();
