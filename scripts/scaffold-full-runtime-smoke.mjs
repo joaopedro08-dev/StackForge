@@ -49,6 +49,16 @@ function pnpmCommand() {
   return process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 }
 
+function pnpmInvocation() {
+  const execPath = process.env.npm_execpath;
+
+  if (execPath && execPath.toLowerCase().includes('pnpm')) {
+    return { command: process.execPath, args: [execPath] };
+  }
+
+  return { command: pnpmCommand(), args: [] };
+}
+
 function packageManagerCommand(packageManager, scriptName) {
   if (packageManager === 'npm') {
     return { command: process.platform === 'win32' ? 'npm.cmd' : 'npm', args: ['run', scriptName] };
@@ -60,6 +70,14 @@ function packageManagerCommand(packageManager, scriptName) {
 
   if (packageManager === 'bun') {
     return { command: process.platform === 'win32' ? 'corepack.cmd' : 'corepack', args: ['bun', 'run', scriptName] };
+  }
+
+  if (packageManager === 'pnpm') {
+    const invocation = pnpmInvocation();
+    return {
+      command: invocation.command,
+      args: [...invocation.args, scriptName],
+    };
   }
 
   return { command: pnpmCommand(), args: [scriptName] };
@@ -101,8 +119,9 @@ async function isPackageManagerAvailable(packageManager) {
 function runCommand(command, args, cwd, env = process.env, options = {}) {
   return new Promise((resolve, reject) => {
     const stdioMode = options.quiet ? 'pipe' : 'inherit';
-    const executable = process.platform === 'win32' ? 'cmd.exe' : command;
-    const executableArgs = process.platform === 'win32' ? ['/d', '/s', '/c', command, ...args] : args;
+    const shouldWrapWithCmd = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+    const executable = shouldWrapWithCmd ? 'cmd.exe' : command;
+    const executableArgs = shouldWrapWithCmd ? ['/d', '/s', '/c', command, ...args] : args;
 
     const child = spawn(executable, executableArgs, {
       cwd,
@@ -202,7 +221,13 @@ async function main() {
               ? { command: process.platform === 'win32' ? 'corepack.cmd' : 'corepack', args: ['yarn', 'install', '--cache-folder', scenarioEnv.YARN_CACHE_FOLDER] }
               : scenario.packageManager === 'bun'
                 ? { command: process.platform === 'win32' ? 'corepack.cmd' : 'corepack', args: ['bun', 'install'] }
-                : { command: pnpmCommand(), args: ['install'] };
+                : (() => {
+                    const invocation = pnpmInvocation();
+                    return {
+                      command: invocation.command,
+                      args: [...invocation.args, 'install'],
+                    };
+                  })();
         await runCommand(installCommand.command, installCommand.args, projectDir, scenarioEnv);
 
         result.stage = 'lint';
