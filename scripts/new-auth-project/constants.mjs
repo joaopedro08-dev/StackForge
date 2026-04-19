@@ -60,7 +60,14 @@ export const topLevelPathsToCopyByProfile = {
   ],
 };
 
-export const optionalTopLevelPathsToCopy = new Set(['.env.production.example']);
+export const optionalTopLevelPathsToCopy = new Set([
+  '.dockerignore',
+  '.env.production.example',
+  '.gitignore',
+  '.github',
+  'docs',
+  'tests',
+]);
 
 export const nestedIgnorePaths = new Set([
   path.normalize('scripts/new-auth-project.mjs'),
