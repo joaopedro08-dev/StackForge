@@ -142,6 +142,46 @@ function runCommand(command, args, cwd, env = process.env, options = {}) {
   });
 }
 
+function isTransientInstallError(error) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+  return (
+    message.includes('esockettimedout') ||
+    message.includes('etimedout') ||
+    message.includes('econnreset') ||
+    message.includes('eai_again') ||
+    message.includes('network connection') ||
+    message.includes('fetch failed') ||
+    message.includes('gateway timeout') ||
+    message.includes('502 bad gateway') ||
+    message.includes('503 service unavailable')
+  );
+}
+
+async function runInstallWithRetry(command, args, cwd, env, packageManager, maxAttempts = 3) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await runCommand(command, args, cwd, env);
+      return;
+    } catch (error) {
+      lastError = error;
+
+      const canRetry = isTransientInstallError(error) && attempt < maxAttempts;
+      if (!canRetry) {
+        throw error;
+      }
+
+      process.stdout.write(
+        `[smoke] install retry ${attempt}/${maxAttempts - 1} for ${packageManager} after transient network error\n`,
+      );
+    }
+  }
+
+  throw lastError;
+}
+
 function printSummary(results) {
   process.stdout.write('[smoke] scaffold full-runtime summary\n');
   process.stdout.write('[smoke] scenario | status | stage | duration\n');
@@ -228,7 +268,13 @@ async function main() {
                       args: [...invocation.args, 'install'],
                     };
                   })();
-        await runCommand(installCommand.command, installCommand.args, projectDir, scenarioEnv);
+        await runInstallWithRetry(
+          installCommand.command,
+          installCommand.args,
+          projectDir,
+          scenarioEnv,
+          scenario.packageManager,
+        );
 
         result.stage = 'lint';
         process.stdout.write(`[smoke] lint scenario=${scenario.name}\n`);
