@@ -2,7 +2,12 @@ import process from 'node:process';
 import path from 'node:path';
 import { mkdir, stat } from 'node:fs/promises';
 import { collectInteractiveOptions, parseCliArgs, sanitizeProjectName } from './new-auth-project/cli.mjs';
-import { consoleApi, projectsRootDir, topLevelPathsToCopyByProfile } from './new-auth-project/constants.mjs';
+import {
+  consoleApi,
+  optionalTopLevelPathsToCopy,
+  projectsRootDir,
+  topLevelPathsToCopyByProfile,
+} from './new-auth-project/constants.mjs';
 import { copyPath } from './new-auth-project/filesystem.mjs';
 import {
   customizeGeneratedPackageJson,
@@ -87,7 +92,23 @@ async function main() {
   await runScaffoldStep('copy_template_files', async () => {
     for (const relativePath of topLevelPathsToCopy) {
       await runScaffoldStep(`copy:${relativePath}`, async () => {
-        await copyPath(relativePath, destinationProjectDir);
+        try {
+          await copyPath(relativePath, destinationProjectDir);
+        } catch (error) {
+          const isMissingOptionalFile =
+            error &&
+            typeof error === 'object' &&
+            'code' in error &&
+            error.code === 'ENOENT' &&
+            optionalTopLevelPathsToCopy.has(relativePath);
+
+          if (isMissingOptionalFile) {
+            consoleApi.warn(`[warn] Optional template file not found and skipped: ${relativePath}`);
+            return;
+          }
+
+          throw error;
+        }
       });
     }
   });

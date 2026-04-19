@@ -60,6 +60,8 @@ export const topLevelPathsToCopyByProfile = {
   ],
 };
 
+export const optionalTopLevelPathsToCopy = new Set(['.env.production.example']);
+
 export const nestedIgnorePaths = new Set([
   path.normalize('scripts/new-auth-project.mjs'),
   path.normalize('developers'),
