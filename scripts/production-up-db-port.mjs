@@ -4,6 +4,7 @@ import { runCommand } from './production/core/process-runner.mjs';
 import { parseUpArgs } from './production/core/up-options.mjs';
 
 async function main() {
+  // Brings up the production compose stack with an override host DB port.
   const { dbPort, skipSmoke, build } = parseUpArgs(process.argv.slice(2));
   const env = {
     ...process.env,
@@ -22,6 +23,7 @@ async function main() {
   await runCommand('docker', ['compose', '--env-file', '.env.production', '-f', 'docker-compose.production.yml', 'ps'], env);
 
   if (!skipSmoke) {
+    // Smoke is optional so operators can decouple bring-up from verification when needed.
     await runCommand('node', ['scripts/production-smoke.mjs'], env);
   }
 

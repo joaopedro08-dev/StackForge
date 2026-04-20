@@ -23,6 +23,7 @@ import { configureGeneratedFeatures } from './new-auth-project/features.mjs';
 import { updateGeneratedReadmeSummary } from './new-auth-project/readme.mjs';
 import { getErrorMessage, runScaffoldStep } from './new-auth-project/scaffold-utils.mjs';
 
+// Orchestrates the full scaffold pipeline for a new generated project.
 async function main() {
   const parsedOptions = parseCliArgs(process.argv.slice(2));
   const resolvedOptions =
@@ -90,6 +91,7 @@ async function main() {
   }
 
   await runScaffoldStep('copy_template_files', async () => {
+    // Copy the selected template profile and tolerate optional files missing in container/runtime variants.
     for (const relativePath of topLevelPathsToCopy) {
       await runScaffoldStep(`copy:${relativePath}`, async () => {
         try {
@@ -161,6 +163,7 @@ async function main() {
   });
 
   await runScaffoldStep('update_dynamic_readme_summary', async () => {
+    // Persist a summary block so the generated README reflects the chosen options.
     await updateGeneratedReadmeSummary(destinationProjectDir, {
       projectName,
       profile,

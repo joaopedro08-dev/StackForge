@@ -12,6 +12,7 @@ import {
 const { rootDir, projectsRootDir, generatorScriptPath } = resolveScaffoldContext(import.meta.url);
 const providers = ['json', 'postgresql', 'mysql', 'sqlite', 'sqlserver'];
 
+// Prints a compact matrix showing provider smoke status and timing.
 function printProviderReport(results) {
   process.stdout.write('[smoke] provider summary\n');
   process.stdout.write('[smoke] provider | status | stage | duration\n');
@@ -51,6 +52,7 @@ function assertRelationalPackageShape(packageJson) {
 }
 
 async function validateGeneratedProject(projectDir, provider) {
+  // Validate provider-sensitive artifacts: env, package shape, docker startup and schema provider.
   const envExamplePath = path.join(projectDir, '.env.example');
   const packageJsonPath = path.join(projectDir, 'package.json');
   const dockerfilePath = path.join(projectDir, 'Dockerfile');
@@ -98,6 +100,7 @@ async function validateGeneratedProject(projectDir, provider) {
 }
 
 async function main() {
+  // Generate one project per provider and assert expected scaffold behavior.
   const runDir = await mkdtemp(path.join(projectsRootDir, 'scaffold-db-smoke-'));
   const generatedProjectNames = [];
   const providerResults = [];

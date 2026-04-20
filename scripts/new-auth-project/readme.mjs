@@ -90,11 +90,25 @@ function resolveArchitectureNotes(architecture) {
   ].join('\n');
 }
 
+function resolveExampleFilesNote(architecture) {
+  if (architecture !== 'mvc' && architecture !== 'clean') {
+    return '';
+  }
+
+  return [
+    'Starter examples:',
+    '',
+    '- folders may include `*.example.*` files as implementation references',
+    '- these files are optional and can be removed when real code is in place',
+  ].join('\n');
+}
+
 function buildSummaryBlock(options) {
   const installCommand = resolveInstallCommand(options.packageManager);
   const devCommand = resolveDevCommand(options.packageManager);
   const codeFence = '```';
   const architectureNotes = resolveArchitectureNotes(options.architecture);
+  const exampleFilesNote = resolveExampleFilesNote(options.architecture);
 
   return `${summaryStartMarker}
 
@@ -117,6 +131,7 @@ Enabled API surface:
 ${resolveEnabledApis(options.apiStyle, options.featureSet)}
 
 ${architectureNotes ? `${architectureNotes}\n` : ''}
+${exampleFilesNote ? `${exampleFilesNote}\n` : ''}
 
 Quick start:
 

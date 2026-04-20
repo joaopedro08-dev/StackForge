@@ -24,6 +24,7 @@ const scenarios = [
   { architecture: 'layered', apiStyle: 'hybrid', database: 'postgresql', language: 'typescript', profile: 'full', featureSet: 'both' },
 ];
 
+// Stable label used in logs and summary rows for each scenario.
 function scenarioLabel(scenario) {
   return `${scenario.architecture}+${scenario.apiStyle}+${scenario.database}+${scenario.language}+${scenario.profile}+${scenario.featureSet}`;
 }
@@ -49,6 +50,7 @@ async function runGeneratorScenario(projectName, scenario) {
 }
 
 async function validateArchitecture(projectDir, architecture) {
+  // Check folder contracts and architecture guide produced by the scaffold.
   const architectureDocPath = path.join(projectDir, 'docs', 'architecture.md');
   await assertFileExists(architectureDocPath);
 
@@ -76,6 +78,7 @@ async function validateArchitecture(projectDir, architecture) {
 }
 
 async function validateApiStyle(projectDir, scenario) {
+  // Validate API-style dependent files, dependencies and OpenAPI shape.
   const { architecture, apiStyle, language, profile } = scenario;
   const envPath = path.join(projectDir, '.env.example');
   const packageJsonPath = path.join(projectDir, 'package.json');
@@ -166,6 +169,7 @@ function printScenarioReport(results) {
 }
 
 async function main() {
+  // Run the full matrix to catch architecture/API regressions before CI runtime smoke.
   const runDir = await mkdtemp(path.join(projectsRootDir, 'scaffold-arch-api-smoke-'));
   const generatedProjectNames = [];
   const scenarioResults = [];

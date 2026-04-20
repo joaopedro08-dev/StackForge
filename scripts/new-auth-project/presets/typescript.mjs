@@ -146,6 +146,134 @@ export default tseslint.config(
   await convertProjectJavaScriptFilesToTypeScript(destinationProjectDir);
   await writeExpressAugmentation(destinationProjectDir);
   await rewriteTypeScriptCoreFiles(destinationProjectDir);
+  await rewriteTypeScriptRepositoryFile(destinationProjectDir);
+}
+
+async function rewriteTypeScriptRepositoryFile(destinationProjectDir) {
+  const repositoryPath = path.join(destinationProjectDir, 'src', 'repositories', 'auth.repository.ts');
+  const repositoryStat = await stat(repositoryPath).catch(() => null);
+
+  if (!repositoryStat?.isFile()) {
+    return;
+  }
+
+  const repositoryRaw = await readFile(repositoryPath, 'utf8');
+
+  const repositoryTypesBlock = `
+type RepositoryUser = {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  emailVerified: boolean;
+  emailVerifiedAt: string | null;
+  createdAt: string;
+};
+
+type RepositoryRefreshToken = {
+  id: string;
+  userId: string;
+  familyId: string;
+  tokenHash: string;
+  createdAt: string;
+  expiresAt: string;
+  familyExpiresAt: string;
+  revokedAt: string | null;
+};
+
+type RepositoryEmailVerificationToken = {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: string;
+  usedAt: string | null;
+};
+
+type RepositoryLoginAttempt = {
+  id: string;
+  ipAddress: string;
+  email: string | null;
+  failCount: number;
+  lockLevel: number;
+  windowStart: string;
+  blockedUntil: string | null;
+  lastFailedAt: string;
+};`;
+
+  let repositoryUpdated = repositoryRaw
+    .replace(
+      "import { getPrismaClient } from '../db/prisma-client';",
+      `import { getPrismaClient } from '../db/prisma-client';\n${repositoryTypesBlock}`,
+    )
+    .replace(/\/\*\*[\s\S]*?\*\/\r?\n/gm, '')
+    .replace('function clone(value) {', 'function clone<T>(value: T): T {')
+    .replace('function mapUser(user) {', 'function mapUser(user: any): RepositoryUser | null {')
+    .replace(
+      'function mapEmailVerificationToken(emailVerificationToken) {',
+      'function mapEmailVerificationToken(emailVerificationToken: any): RepositoryEmailVerificationToken | null {',
+    )
+    .replace('function mapRefreshToken(refreshToken) {', 'function mapRefreshToken(refreshToken: any): RepositoryRefreshToken | null {')
+    .replace('function mapLoginAttempt(loginAttempt) {', 'function mapLoginAttempt(loginAttempt: any): RepositoryLoginAttempt | null {')
+    .replace('export async function findUserByEmail(email) {', 'export async function findUserByEmail(email: string): Promise<RepositoryUser | null> {')
+    .replace('export async function findUserById(userId) {', 'export async function findUserById(userId: string): Promise<RepositoryUser | null> {')
+    .replace('export async function createUser(user) {', 'export async function createUser(user: RepositoryUser): Promise<void> {')
+    .replace(
+      'export async function createRefreshToken(refreshToken) {',
+      'export async function createRefreshToken(refreshToken: RepositoryRefreshToken): Promise<void> {',
+    )
+    .replace(
+      'export async function createEmailVerificationToken(emailVerificationToken) {',
+      'export async function createEmailVerificationToken(emailVerificationToken: RepositoryEmailVerificationToken): Promise<void> {',
+    )
+    .replace(
+      'export async function findActiveEmailVerificationTokenByHash(tokenHash) {',
+      'export async function findActiveEmailVerificationTokenByHash(tokenHash: string): Promise<RepositoryEmailVerificationToken | null> {',
+    )
+    .replace(
+      'export async function markEmailVerificationTokenUsed(tokenHash, usedAt) {',
+      'export async function markEmailVerificationTokenUsed(tokenHash: string, usedAt: string): Promise<RepositoryEmailVerificationToken | null> {',
+    )
+    .replace(
+      'export async function markUserEmailVerified(userId, verifiedAt) {',
+      'export async function markUserEmailVerified(userId: string, verifiedAt: string): Promise<RepositoryUser | null> {',
+    )
+    .replace(
+      'export async function findActiveRefreshTokenByHash(tokenHash) {',
+      'export async function findActiveRefreshTokenByHash(tokenHash: string): Promise<RepositoryRefreshToken | null> {',
+    )
+    .replace(
+      'export async function revokeRefreshToken(tokenHash, revokedAt) {',
+      'export async function revokeRefreshToken(tokenHash: string, revokedAt: string): Promise<void> {',
+    )
+    .replace(
+      'export async function findRefreshTokenByHash(tokenHash) {',
+      'export async function findRefreshTokenByHash(tokenHash: string): Promise<RepositoryRefreshToken | null> {',
+    )
+    .replace(
+      'export async function revokeRefreshTokenFamily(familyId, revokedAt) {',
+      'export async function revokeRefreshTokenFamily(familyId: string, revokedAt: string): Promise<void> {',
+    )
+    .replace('export async function writeDatabase() {', 'export async function writeDatabase(): Promise<void> {')
+    .replace(
+      'export async function findLoginAttempt(ipAddress, email) {',
+      'export async function findLoginAttempt(ipAddress: string, email: string | null): Promise<RepositoryLoginAttempt | null> {',
+    )
+    .replace(
+      'export async function upsertLoginAttempt(loginAttempt) {',
+      'export async function upsertLoginAttempt(loginAttempt: RepositoryLoginAttempt): Promise<void> {',
+    )
+    .replace(
+      'export async function deleteLoginAttempt(ipAddress, email) {',
+      'export async function deleteLoginAttempt(ipAddress: string, email: string | null): Promise<void> {',
+    )
+    .replace('export async function clearAllLoginAttempts() {', 'export async function clearAllLoginAttempts(): Promise<void> {');
+
+  // Keep only one blank line between import/type sections after JSDoc removal.
+  repositoryUpdated = repositoryUpdated.replace(/\n{3,}/g, '\n\n');
+
+  if (repositoryUpdated !== repositoryRaw) {
+    await writeFile(repositoryPath, repositoryUpdated, 'utf8');
+  }
 }
 
 async function writeExpressAugmentation(destinationProjectDir) {
@@ -677,6 +805,7 @@ type RefreshTokenRecord = {
   userId: string;
   familyId: string;
   expiresAt: string;
+  familyExpiresAt: string;
   revokedAt: string | null;
 };
 
@@ -742,11 +871,18 @@ function signAccessToken(user: Pick<AuthUser, 'id' | 'email'>): string {
   );
 }
 
-async function issueRefreshToken(userId: string, familyId: string = createId()): Promise<string> {
+async function issueRefreshToken(
+  userId: string,
+  familyId: string = createId(),
+  familyExpiresAt: string | null = null,
+): Promise<string> {
   const refreshToken = generateRefreshToken();
   const refreshTokenHash = hashValue(refreshToken);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const familyExpiresAtIso =
+    familyExpiresAt ??
+    new Date(now.getTime() + env.REFRESH_TOKEN_ABSOLUTE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   await createRefreshToken({
     id: createId(),
@@ -755,16 +891,11 @@ async function issueRefreshToken(userId: string, familyId: string = createId()):
     tokenHash: refreshTokenHash,
     createdAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
+    familyExpiresAt: familyExpiresAtIso,
     revokedAt: null,
   });
 
   return refreshToken;
-}
-
-function getActiveRefreshTokenRecord(token: string): Promise<RefreshTokenRecord | null> {
-  const tokenHash = hashValue(token);
-
-  return findActiveRefreshTokenByHash(tokenHash) as Promise<RefreshTokenRecord | null>;
 }
 
 function getRefreshTokenRecord(token: string): Promise<RefreshTokenRecord | null> {
@@ -852,6 +983,14 @@ export async function refreshSession(refreshTokenValue: string | undefined): Pro
     throw new HttpError(401, 'Invalid refresh token.');
   }
 
+  const familyExpiresAt = tokenRecord.familyExpiresAt ?? tokenRecord.expiresAt;
+
+  if (new Date(familyExpiresAt).getTime() <= Date.now()) {
+    await revokeRefreshTokenFamily(tokenRecord.familyId, new Date().toISOString());
+    await writeDatabase();
+    throw new HttpError(401, 'Session expired. Please log in again.');
+  }
+
   await revokeRefreshToken(tokenRecord.tokenHash, new Date().toISOString());
 
   const user = (await findUserById(tokenRecord.userId)) as AuthUser | null;
@@ -860,7 +999,7 @@ export async function refreshSession(refreshTokenValue: string | undefined): Pro
   }
 
   const accessToken = signAccessToken(user);
-  const refreshToken = await issueRefreshToken(user.id, tokenRecord.familyId);
+  const refreshToken = await issueRefreshToken(user.id, tokenRecord.familyId, familyExpiresAt);
 
   await writeDatabase();
 
@@ -876,12 +1015,12 @@ export async function logout(refreshTokenValue: string | undefined): Promise<voi
     throw new HttpError(401, 'Unable to end the session. Please log in again.');
   }
 
-  const tokenRecord = await getActiveRefreshTokenRecord(refreshTokenValue);
+  const tokenRecord = await getRefreshTokenRecord(refreshTokenValue);
   if (!tokenRecord) {
     throw new HttpError(401, 'Session is invalid or expired. Please log in again.');
   }
 
-  await revokeRefreshToken(tokenRecord.tokenHash, new Date().toISOString());
+  await revokeRefreshTokenFamily(tokenRecord.familyId, new Date().toISOString());
   await writeDatabase();
 }
 

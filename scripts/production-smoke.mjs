@@ -21,6 +21,7 @@ const endpoints = [
 ];
 
 async function probeWithRetry(endpoint) {
+  // Probe each endpoint with bounded retries to tolerate cold starts.
   const url = `${BASE_URL}${endpoint.path}`;
   let lastError = null;
 
@@ -48,6 +49,7 @@ async function probeWithRetry(endpoint) {
 }
 
 async function main() {
+  // Basic production readiness contract: liveness + readiness must be healthy.
   consoleApi.log(`[start] smoke test baseUrl=${BASE_URL} retries=${RETRIES} delayMs=${DELAY_MS}`);
 
   for (const endpoint of endpoints) {

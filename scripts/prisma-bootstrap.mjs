@@ -2,6 +2,7 @@ import process from 'node:process';
 import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 
+// Resolve pnpm invocation for both direct shell runs and npm/pnpm-script environments.
 function resolvePnpmInvocation() {
   const execPath = process.env.npm_execpath;
 
@@ -19,6 +20,7 @@ function resolvePnpmInvocation() {
 }
 
 function runCommand(command, args) {
+  // Cross-platform process execution with Windows command wrapping when needed.
   return new Promise((resolve, reject) => {
     const shouldWrapWithCmd = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
     const executable = shouldWrapWithCmd ? 'cmd.exe' : command;
@@ -59,6 +61,7 @@ function isTransientPrismaError(error) {
 }
 
 async function main() {
+  // Apply schema for relational providers with retry protection for transient DB startup failures.
   const provider = (process.env.DATABASE_PROVIDER ?? 'json').trim().toLowerCase();
 
   if (provider === 'json') {

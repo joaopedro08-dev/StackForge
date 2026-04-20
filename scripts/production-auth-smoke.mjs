@@ -8,6 +8,7 @@ const BASE_URL = process.env.PROD_BASE_URL || 'http://localhost:3001';
 const { requestJson, cookieJar } = createCookieJsonClient(BASE_URL, fetchApi);
 
 async function main() {
+  // Exercise the cookie + CSRF auth flow against a production-like deployment.
   const email = `smoke-${crypto.randomUUID()}@test.local`;
   const password = 'StrongPass123';
 

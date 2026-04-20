@@ -24,6 +24,7 @@ const scenarios = [
   },
 ];
 
+// Supports quick mode (single scenario) for fast local checks and full mode for CI-grade coverage.
 function normalizeRuntimeMode(rawMode) {
   const mode = (rawMode ?? '').toLowerCase().trim();
   if (mode === 'quick' || mode === 'full') {
@@ -117,6 +118,7 @@ async function isPackageManagerAvailable(packageManager) {
 }
 
 function runCommand(command, args, cwd, env = process.env, options = {}) {
+  // Execute commands in a cross-platform way, including .cmd/.bat wrapping on Windows.
   return new Promise((resolve, reject) => {
     const stdioMode = options.quiet ? 'pipe' : 'inherit';
     const shouldWrapWithCmd = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
@@ -159,6 +161,7 @@ function isTransientInstallError(error) {
 }
 
 async function runInstallWithRetry(command, args, cwd, env, packageManager, maxAttempts = 3) {
+  // Retry only transient network/install failures to avoid flaky smoke runs.
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -205,6 +208,7 @@ function printSummary(results) {
 }
 
 async function main() {
+  // End-to-end validation: generate, install, lint and test for each package-manager scenario.
   const runtimeMode = normalizeRuntimeMode(process.env.SCAFFOLD_FULL_RUNTIME_MODE);
   const selectedScenarios = selectScenarios(runtimeMode);
   const runDir = await mkdtemp(path.join(projectsRootDir, 'scaffold-full-runtime-smoke-'));
