@@ -299,7 +299,7 @@ export function App() {
             <CardContent>
               {resultError ? <Alert className="border-destructive/40 text-destructive">{resultError}</Alert> : null}
               {resultWarning ? <Alert className="border-amber-300/60 bg-amber-50/80 text-amber-900">{resultWarning}</Alert> : null}
-              <Textarea readOnly value={resultOutput || t.noDownload} className="min-h-55 font-mono text-xs" />
+              <Textarea readOnly value={resultOutput || t.noDownload} className="min-h-40 md:min-h-55 font-mono text-xs" />
             </CardContent>
             <CardFooter>
               <Button variant="secondary" onClick={cleanupDownloads} disabled={isCleaningDownloads || isGenerating}>
@@ -314,7 +314,7 @@ export function App() {
                 <CardTitle className="text-lg">{t.nextSteps}</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="rounded-2xl bg-muted/60 p-4 text-xs leading-relaxed whitespace-pre-wrap">{`cd developers/projects/${safeProjectName}
+                <pre className="overflow-x-auto rounded-2xl bg-muted/60 p-4 text-xs leading-relaxed whitespace-pre-wrap wrap-break-word">{`cd developers/projects/${safeProjectName}
 ${packageManager} ${t.installLine}
 node -e "require('node:fs').copyFileSync('.env.example', '.env')"
 ${runtimeDevCommand}`}</pre>

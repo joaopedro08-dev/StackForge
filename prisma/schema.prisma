@@ -12,10 +12,26 @@ model User {
   name          String
   email         String         @unique
   passwordHash  String
+  emailVerified Boolean        @default(false)
+  emailVerifiedAt DateTime?
   createdAt     DateTime
   refreshTokens RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
+}
+
+model EmailVerificationToken {
+  id        String   @id @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 
 model LoginAttempt {
@@ -40,6 +56,7 @@ model RefreshToken {
   tokenHash String   @unique
   createdAt DateTime
   expiresAt DateTime
+  familyExpiresAt DateTime
   revokedAt DateTime?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

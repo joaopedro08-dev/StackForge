@@ -156,8 +156,8 @@ async function disableAuthRoutes(destinationProjectDir) {
     const appUpdated = appRaw
       .replace(/^import \{ authRateLimiter \} from '\.\/middlewares\/rate-limit\.middleware\.js';\r?\n/m, '')
       .replace(/^import \{ authRouter \} from '\.\/modules\/auth\/auth\.routes\.js';\r?\n/m, '')
-      .replace(/^if \(\['rest', 'hybrid'\]\.includes\(env\.API_STYLE\)\) \{\r?\n\s{2}app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n\}\r?\n/m, '')
-      .replace(/^app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n/m, '');
+      .replace(/^\s*if \(\['rest', 'hybrid'\]\.includes\(env\.API_STYLE\)\) \{\r?\n\s*app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n\s*\}\r?\n/m, '')
+      .replace(/^\s*app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n/m, '');
 
     if (appUpdated !== appRaw) {
       await writeFile(appPath, appUpdated, 'utf8');
@@ -331,10 +331,43 @@ async function disableEmailRoutes(destinationProjectDir) {
     const appRaw = await readFile(appPath, 'utf8');
     const appUpdated = appRaw
       .replace(/^import \{ emailRouter \} from '\.\/modules\/email\/email\.routes\.js';\r?\n/m, '')
-      .replace(/^if \(env\.EMAIL_ENABLED\) \{\r?\n\s{2}app\.use\('\/email', emailRouter\);\r?\n\}\r?\n/m, '');
+      .replace(/\s*if \(env\.EMAIL_ENABLED\) \{\s*app\.use\('\/email', emailRouter\);\s*\}\s*/gm, '');
 
     if (appUpdated !== appRaw) {
       await writeFile(appPath, appUpdated, 'utf8');
+    }
+  }
+}
+
+async function removeEmailServiceImportFromAuthService(destinationProjectDir) {
+  const authServiceCandidates = [
+    path.join(destinationProjectDir, 'src', 'modules', 'auth', 'auth.service.js'),
+    path.join(destinationProjectDir, 'src', 'modules', 'auth', 'auth.service.ts'),
+  ];
+
+  for (const authServicePath of authServiceCandidates) {
+    const authServiceStat = await stat(authServicePath).catch(() => null);
+
+    if (!authServiceStat?.isFile()) {
+      continue;
+    }
+
+    const authServiceRaw = await readFile(authServicePath, 'utf8');
+    let authServiceUpdated = authServiceRaw
+      .replace(/^import \{ sendEmail \} from '\.\.\/email\/email\.service\.(?:js|ts)';\r?\n/m, '');
+
+    authServiceUpdated = authServiceUpdated.replace(
+      /^(async function issueEmailVerificationToken\(user\) \{)/m,
+      '$1\n  if (!env.EMAIL_ENABLED) {\n    return;\n  }',
+    );
+
+    authServiceUpdated = authServiceUpdated.replace(
+      /\s*await sendEmail\(\{[\s\S]*?\}\);\s*/,
+      '',
+    );
+
+    if (authServiceUpdated !== authServiceRaw) {
+      await writeFile(authServicePath, authServiceUpdated, 'utf8');
     }
   }
 }
@@ -350,6 +383,8 @@ async function removeEmailIntegrationTests(destinationProjectDir) {
   const candidates = [
     path.join(destinationProjectDir, 'tests', 'integration', 'email.http.test.js'),
     path.join(destinationProjectDir, 'tests', 'integration', 'email.http.test.ts'),
+    path.join(destinationProjectDir, 'tests', 'integration', 'auth.email-verification.http.test.js'),
+    path.join(destinationProjectDir, 'tests', 'integration', 'auth.email-verification.http.test.ts'),
   ];
 
   for (const testPath of candidates) {
@@ -505,6 +540,11 @@ export async function configureGeneratedFeatures(destinationProjectDir, featureS
 
   await configureEmailDependency(destinationProjectDir, emailEnabled);
   await configureEmailOpenApiPath(destinationProjectDir, emailEnabled);
+
+  if (!emailEnabled) {
+    await removeEmailServiceImportFromAuthService(destinationProjectDir);
+  }
+
   await updateReadmeAuthSection(destinationProjectDir, authEnabled);
   await updateReadmeGraphQlSection(destinationProjectDir, graphQlEnabled);
   await updateReadmeEmailSection(destinationProjectDir, emailEnabled);

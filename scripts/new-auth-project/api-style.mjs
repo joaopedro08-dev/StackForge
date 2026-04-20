@@ -543,18 +543,31 @@ async function updateGeneratedRuntimeApiStyle(destinationProjectDir, apiStyle) {
   if (appStat?.isFile()) {
     const appRaw = await readFile(appPath, 'utf8');
     let appUpdated = appRaw;
+    const needsGraphQLRuntime = apiStyle === 'graphql' || apiStyle === 'hybrid';
 
-    if (!appUpdated.includes('mountGraphQLApi')) {
+    if (needsGraphQLRuntime && !appUpdated.includes('mountGraphQLIfEnabled')) {
       appUpdated = appUpdated.replace(
         "import { authRouter } from './modules/auth/auth.routes.js';",
         "import { authRouter } from './modules/auth/auth.routes.js';\n\nasync function mountGraphQLIfEnabled(appInstance) {\n  if (!['graphql', 'hybrid'].includes(env.API_STYLE)) {\n    return;\n  }\n\n  const { mountGraphQLApi } = await import('./graphql/server.js');\n  await mountGraphQLApi(appInstance);\n}\n",
       );
     }
 
-    appUpdated = appUpdated.replace(
-      "app.use('/auth', authRateLimiter, authRouter);",
-      "if (['rest', 'hybrid'].includes(env.API_STYLE)) {\n  app.use('/auth', authRateLimiter, authRouter);\n}\n\nawait mountGraphQLIfEnabled(app);",
-    );
+    if (needsGraphQLRuntime) {
+      appUpdated = appUpdated.replace(
+        "app.use('/auth', authRateLimiter, authRouter);",
+        "if (['rest', 'hybrid'].includes(env.API_STYLE)) {\n  app.use('/auth', authRateLimiter, authRouter);\n}\n\nvoid mountGraphQLIfEnabled(app);",
+      );
+    } else {
+      appUpdated = appUpdated
+        .replace(
+          /\nasync function mountGraphQLIfEnabled\(appInstance\) \{[\s\S]*?\n\}\n\n/m,
+          '\n',
+        )
+        .replace(
+          "if (['rest', 'hybrid'].includes(env.API_STYLE)) {\n  app.use('/auth', authRateLimiter, authRouter);\n}\n\nvoid mountGraphQLIfEnabled(app);",
+          "app.use('/auth', authRateLimiter, authRouter);",
+        );
+    }
 
     if (appUpdated !== appRaw) {
       await writeFile(appPath, appUpdated, 'utf8');

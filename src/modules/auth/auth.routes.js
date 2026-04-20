@@ -7,11 +7,13 @@ import {
   meHandler,
   refreshTokenHandler,
   registerHandler,
+  verifyEmailHandler,
 } from './auth.controller.js';
 
 const authRouter = Router();
 
 authRouter.post('/register', registerHandler);
+authRouter.get('/verify-email', verifyEmailHandler);
 authRouter.post('/login', loginHandler);
 authRouter.get('/me', authenticate, meHandler);
 authRouter.post('/refresh-token', verifyCsrfToken, refreshTokenHandler);

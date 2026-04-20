@@ -9,6 +9,8 @@ export async function resetTestDatabase() {
   db.data = {
     users: [],
     refreshTokens: [],
+    emailVerificationTokens: [],
+    revokedAccessTokens: [],
     loginAttempts: [],
   };
 
@@ -23,6 +25,8 @@ export async function seedTestUser(overrides = {}) {
     name: overrides.name ?? 'John Silva',
     email: overrides.email ?? 'john@email.com',
     passwordHash,
+    emailVerified: overrides.emailVerified ?? true,
+    emailVerifiedAt: overrides.emailVerifiedAt ?? '2026-04-17T00:00:00.000Z',
     createdAt: overrides.createdAt ?? '2026-04-17T00:00:00.000Z',
   };
 
@@ -32,13 +36,33 @@ export async function seedTestUser(overrides = {}) {
 }
 
 export function seedExpiredRefreshToken(userId, rawToken = 'expired-refresh-token') {
+  const now = new Date().toISOString();
+
   db.data.refreshTokens.push({
     id: createId(),
     userId,
     familyId: createId(),
     tokenHash: hashValue(rawToken),
-    createdAt: '2026-04-17T00:00:00.000Z',
+    createdAt: now,
     expiresAt: '2026-04-16T00:00:00.000Z',
+    familyExpiresAt: now,
+    revokedAt: null,
+  });
+
+  return rawToken;
+}
+
+export function seedFamilyExpiredRefreshToken(userId, rawToken = 'expired-family-refresh-token') {
+  const now = new Date();
+
+  db.data.refreshTokens.push({
+    id: createId(),
+    userId,
+    familyId: createId(),
+    tokenHash: hashValue(rawToken),
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+    familyExpiresAt: new Date(now.getTime() - 60 * 1000).toISOString(),
     revokedAt: null,
   });
 

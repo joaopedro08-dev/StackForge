@@ -1,52 +1,29 @@
-import crypto from 'node:crypto';
-import { env } from '../../config/env.js';
-import { CSRF_COOKIE_NAME } from '../../middlewares/csrf.middleware.js';
 import { HttpError } from '../../utils/http-error.js';
 import { info, warn } from '../../utils/logger.js';
-import { loginSchema, registerSchema } from './auth.schemas.js';
+import { loginSchema, registerSchema, verifyEmailSchema } from './auth.schemas.js';
 import { clearLoginFailures, isLoginBlocked, recordLoginFailure } from './login-attempts.js';
-import { getUserById, login, logout, refreshSession, register } from './auth.service.js';
+import { getUserById, login, logout, refreshSession, register, revokeAccessToken, verifyEmailToken } from './auth.service.js';
+import {
+  clearCsrfCookie,
+  clearRefreshCookie,
+  createCsrfToken,
+  readRefreshCookie,
+  setCsrfCookie,
+  setRefreshCookie,
+} from './auth.cookies.js';
 
-const refreshCookieName = 'refreshToken';
+function readBearerToken(req) {
+  const authorizationHeader = req.headers.authorization;
+  if (!authorizationHeader) {
+    return null;
+  }
 
-function getRefreshCookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: env.NODE_ENV === 'production',
-    maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-    path: '/',
-  };
-}
+  const [scheme, value] = authorizationHeader.split(' ');
+  if (!scheme || !value || scheme.toLowerCase() !== 'bearer') {
+    return null;
+  }
 
-function setRefreshCookie(res, refreshToken) {
-  res.cookie(refreshCookieName, refreshToken, getRefreshCookieOptions());
-}
-
-function clearRefreshCookie(res) {
-  res.clearCookie(refreshCookieName, getRefreshCookieOptions());
-}
-
-function createCsrfToken() {
-  return crypto.randomBytes(24).toString('hex');
-}
-
-function getCsrfCookieOptions() {
-  return {
-    httpOnly: false,
-    sameSite: 'strict',
-    secure: env.NODE_ENV === 'production',
-    maxAge: env.CSRF_TOKEN_TTL_MINUTES * 60 * 1000,
-    path: '/',
-  };
-}
-
-function setCsrfCookie(res, csrfToken) {
-  res.cookie(CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions());
-}
-
-function clearCsrfCookie(res) {
-  res.clearCookie(CSRF_COOKIE_NAME, getCsrfCookieOptions());
+  return value.trim() || null;
 }
 
 export async function registerHandler(req, res, next) {
@@ -141,7 +118,7 @@ export async function meHandler(req, res, next) {
 
 export async function refreshTokenHandler(req, res, next) {
   try {
-    const refreshTokenValue = req.cookies?.[refreshCookieName];
+    const refreshTokenValue = readRefreshCookie(req);
     const result = await refreshSession(refreshTokenValue);
     const csrfToken = createCsrfToken();
 
@@ -167,9 +144,15 @@ export async function refreshTokenHandler(req, res, next) {
 
 export async function logoutHandler(req, res, next) {
   try {
-    const refreshTokenValue = req.cookies?.[refreshCookieName];
+    const refreshTokenValue = readRefreshCookie(req);
+    const accessToken = readBearerToken(req);
 
     await logout(refreshTokenValue);
+
+    if (accessToken) {
+      revokeAccessToken(accessToken);
+    }
+
     clearRefreshCookie(res);
     clearCsrfCookie(res);
 
@@ -179,6 +162,30 @@ export async function logoutHandler(req, res, next) {
     });
 
     return res.status(200).json({ message: 'Logged out successfully.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyEmailHandler(req, res, next) {
+  try {
+    const parsedQuery = verifyEmailSchema.parse({
+      token: req.query?.token,
+    });
+
+    const user = await verifyEmailToken(parsedQuery.token);
+
+    info('auth_email_verified', {
+      requestId: req.context?.requestId,
+      userId: user.id,
+      email: user.email,
+      ip: req.ip,
+    });
+
+    return res.status(200).json({
+      message: 'Email verified successfully.',
+      user,
+    });
   } catch (error) {
     next(error);
   }

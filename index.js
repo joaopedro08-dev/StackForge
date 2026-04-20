@@ -2,7 +2,6 @@ import http from 'node:http';
 import { env } from './src/config/env.js';
 import { app } from './src/app.js';
 import { info, error as logError } from './src/utils/logger.js';
-
 const server = http.createServer(app);
 
 server.on('error', (listenError) => {

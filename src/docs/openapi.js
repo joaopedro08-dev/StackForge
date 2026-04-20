@@ -218,6 +218,45 @@ export const openApiDocument = {
         },
       },
     },
+    '/auth/verify-email': {
+      get: {
+        summary: 'Verify account email using token',
+        parameters: [
+          {
+            in: 'query',
+            name: 'token',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Email verification token',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Email verified successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    user: { $ref: '#/components/schemas/User' },
+                  },
+                  required: ['message', 'user'],
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Invalid or expired verification token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/me': {
       get: {
         summary: 'Get current authenticated user',

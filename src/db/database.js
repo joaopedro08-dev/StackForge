@@ -10,6 +10,8 @@ fs.mkdirSync(dataDirPath, { recursive: true });
 const defaultData = {
   users: [],
   refreshTokens: [],
+  emailVerificationTokens: [],
+  revokedAccessTokens: [],
   loginAttempts: [],
 };
 

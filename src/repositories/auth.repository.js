@@ -2,6 +2,39 @@ import { db } from '../db/database.js';
 import { env } from '../config/env.js';
 import { getPrismaClient } from '../db/prisma-client.js';
 
+/**
+ * @typedef {Object} RepositoryUser
+ * @property {string} id
+ * @property {string} name
+ * @property {string} email
+ * @property {string} passwordHash
+ * @property {string} createdAt
+ */
+
+/**
+ * @typedef {Object} RepositoryRefreshToken
+ * @property {string} id
+ * @property {string} userId
+ * @property {string} familyId
+ * @property {string} tokenHash
+ * @property {string} createdAt
+ * @property {string} expiresAt
+ * @property {string} familyExpiresAt
+ * @property {string|null} revokedAt
+ */
+
+/**
+ * @typedef {Object} RepositoryLoginAttempt
+ * @property {string} id
+ * @property {string} ipAddress
+ * @property {string|null} email
+ * @property {number} failCount
+ * @property {number} lockLevel
+ * @property {string} windowStart
+ * @property {string|null} blockedUntil
+ * @property {string} lastFailedAt
+ */
+
 function clone(value) {
   return structuredClone(value);
 }
@@ -24,6 +57,7 @@ function ensureSupportedProvider() {
   );
 }
 
+/** @param {any} user */
 function mapUser(user) {
   if (!user) {
     return null;
@@ -34,10 +68,28 @@ function mapUser(user) {
     name: user.name,
     email: user.email,
     passwordHash: user.passwordHash,
+    emailVerified: user.emailVerified,
+    emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
     createdAt: user.createdAt.toISOString(),
   };
 }
 
+/** @param {any} emailVerificationToken */
+function mapEmailVerificationToken(emailVerificationToken) {
+  if (!emailVerificationToken) {
+    return null;
+  }
+
+  return {
+    id: emailVerificationToken.id,
+    userId: emailVerificationToken.userId,
+    tokenHash: emailVerificationToken.tokenHash,
+    expiresAt: emailVerificationToken.expiresAt.toISOString(),
+    usedAt: emailVerificationToken.usedAt ? emailVerificationToken.usedAt.toISOString() : null,
+  };
+}
+
+/** @param {any} refreshToken */
 function mapRefreshToken(refreshToken) {
   if (!refreshToken) {
     return null;
@@ -50,10 +102,12 @@ function mapRefreshToken(refreshToken) {
     tokenHash: refreshToken.tokenHash,
     createdAt: refreshToken.createdAt.toISOString(),
     expiresAt: refreshToken.expiresAt.toISOString(),
+    familyExpiresAt: (refreshToken.familyExpiresAt ?? refreshToken.expiresAt).toISOString(),
     revokedAt: refreshToken.revokedAt ? refreshToken.revokedAt.toISOString() : null,
   };
 }
 
+/** @param {any} loginAttempt */
 function mapLoginAttempt(loginAttempt) {
   if (!loginAttempt) {
     return null;
@@ -71,6 +125,7 @@ function mapLoginAttempt(loginAttempt) {
   };
 }
 
+/** @param {string} email */
 export async function findUserByEmail(email) {
   ensureSupportedProvider();
 
@@ -86,6 +141,7 @@ export async function findUserByEmail(email) {
   return db.data.users.find((user) => user.email === email) ?? null;
 }
 
+/** @param {string} userId */
 export async function findUserById(userId) {
   ensureSupportedProvider();
 
@@ -101,6 +157,7 @@ export async function findUserById(userId) {
   return db.data.users.find((user) => user.id === userId) ?? null;
 }
 
+/** @param {RepositoryUser} user */
 export async function createUser(user) {
   ensureSupportedProvider();
 
@@ -112,6 +169,8 @@ export async function createUser(user) {
         name: user.name,
         email: user.email,
         passwordHash: user.passwordHash,
+        emailVerified: user.emailVerified,
+        emailVerifiedAt: user.emailVerifiedAt ? new Date(user.emailVerifiedAt) : null,
         createdAt: new Date(user.createdAt),
       },
     });
@@ -122,6 +181,7 @@ export async function createUser(user) {
   db.data.users.push(clone(user));
 }
 
+/** @param {RepositoryRefreshToken} refreshToken */
 export async function createRefreshToken(refreshToken) {
   ensureSupportedProvider();
 
@@ -135,6 +195,7 @@ export async function createRefreshToken(refreshToken) {
         tokenHash: refreshToken.tokenHash,
         createdAt: new Date(refreshToken.createdAt),
         expiresAt: new Date(refreshToken.expiresAt),
+        familyExpiresAt: new Date(refreshToken.familyExpiresAt),
         revokedAt: refreshToken.revokedAt ? new Date(refreshToken.revokedAt) : null,
       },
     });
@@ -145,6 +206,122 @@ export async function createRefreshToken(refreshToken) {
   db.data.refreshTokens.push(clone(refreshToken));
 }
 
+/** @param {any} emailVerificationToken */
+export async function createEmailVerificationToken(emailVerificationToken) {
+  ensureSupportedProvider();
+
+  if (isRelationalProvider()) {
+    const prisma = await getPrismaClient();
+    await prisma.emailVerificationToken.create({
+      data: {
+        id: emailVerificationToken.id,
+        userId: emailVerificationToken.userId,
+        tokenHash: emailVerificationToken.tokenHash,
+        expiresAt: new Date(emailVerificationToken.expiresAt),
+        usedAt: emailVerificationToken.usedAt ? new Date(emailVerificationToken.usedAt) : null,
+      },
+    });
+
+    return;
+  }
+
+  db.data.emailVerificationTokens.push(clone(emailVerificationToken));
+}
+
+/** @param {string} tokenHash */
+export async function findActiveEmailVerificationTokenByHash(tokenHash) {
+  ensureSupportedProvider();
+  const now = new Date();
+
+  if (isRelationalProvider()) {
+    const prisma = await getPrismaClient();
+    const token = await prisma.emailVerificationToken.findFirst({
+      where: {
+        tokenHash,
+        usedAt: null,
+        expiresAt: {
+          gt: now,
+        },
+      },
+    });
+
+    return mapEmailVerificationToken(token);
+  }
+
+  return (
+    db.data.emailVerificationTokens.find(
+      (entry) => entry.tokenHash === tokenHash && entry.usedAt === null && new Date(entry.expiresAt).getTime() > now.getTime(),
+    ) ?? null
+  );
+}
+
+/** @param {string} tokenHash @param {string} usedAt */
+export async function markEmailVerificationTokenUsed(tokenHash, usedAt) {
+  ensureSupportedProvider();
+
+  if (isRelationalProvider()) {
+    const prisma = await getPrismaClient();
+    const token = await prisma.emailVerificationToken.findUnique({
+      where: {
+        tokenHash,
+      },
+    });
+
+    if (!token) {
+      return null;
+    }
+
+    const updated = await prisma.emailVerificationToken.update({
+      where: {
+        tokenHash,
+      },
+      data: {
+        usedAt: new Date(usedAt),
+      },
+    });
+
+    return mapEmailVerificationToken(updated);
+  }
+
+  const token = db.data.emailVerificationTokens.find((entry) => entry.tokenHash === tokenHash);
+  if (!token) {
+    return null;
+  }
+
+  token.usedAt = usedAt;
+  return token;
+}
+
+/** @param {string} userId @param {string} verifiedAt */
+export async function markUserEmailVerified(userId, verifiedAt) {
+  ensureSupportedProvider();
+
+  if (isRelationalProvider()) {
+    const prisma = await getPrismaClient();
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        emailVerified: true,
+        emailVerifiedAt: new Date(verifiedAt),
+      },
+    });
+
+    return mapUser(updatedUser);
+  }
+
+  const user = db.data.users.find((entry) => entry.id === userId);
+  if (!user) {
+    return null;
+  }
+
+  user.emailVerified = true;
+  user.emailVerifiedAt = verifiedAt;
+  return user;
+}
+
+/** @param {string} tokenHash */
 export async function findActiveRefreshTokenByHash(tokenHash) {
   ensureSupportedProvider();
 
@@ -175,6 +352,7 @@ export async function findActiveRefreshTokenByHash(tokenHash) {
   );
 }
 
+/** @param {string} tokenHash @param {string} revokedAt */
 export async function revokeRefreshToken(tokenHash, revokedAt) {
   ensureSupportedProvider();
 
@@ -212,6 +390,7 @@ export async function revokeRefreshToken(tokenHash, revokedAt) {
   return tokenRecord;
 }
 
+/** @param {string} tokenHash */
 export async function findRefreshTokenByHash(tokenHash) {
   ensureSupportedProvider();
 
@@ -229,6 +408,7 @@ export async function findRefreshTokenByHash(tokenHash) {
   return db.data.refreshTokens.find((entry) => entry.tokenHash === tokenHash) ?? null;
 }
 
+/** @param {string} familyId @param {string} revokedAt */
 export async function revokeRefreshTokenFamily(familyId, revokedAt) {
   ensureSupportedProvider();
 
@@ -264,6 +444,7 @@ export async function writeDatabase() {
   return db.write();
 }
 
+/** @param {string} ipAddress @param {string|null} email */
 export async function findLoginAttempt(ipAddress, email) {
   ensureSupportedProvider();
 
@@ -286,6 +467,7 @@ export async function findLoginAttempt(ipAddress, email) {
   );
 }
 
+/** @param {RepositoryLoginAttempt} loginAttempt */
 export async function upsertLoginAttempt(loginAttempt) {
   ensureSupportedProvider();
 
@@ -333,6 +515,7 @@ export async function upsertLoginAttempt(loginAttempt) {
   return loginAttempt;
 }
 
+/** @param {string} ipAddress @param {string|null} email */
 export async function deleteLoginAttempt(ipAddress, email) {
   ensureSupportedProvider();
 

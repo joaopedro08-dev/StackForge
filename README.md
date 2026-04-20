@@ -1,6 +1,6 @@
 # StackForge
 
-Modern SaaS authentication API built with Node.js + Express, including:
+StackForge, the API scaffold generator with Node.js + Express, including:
 
 - register
 - login

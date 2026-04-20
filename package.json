@@ -2,7 +2,7 @@
   "name": "stackforge",
   "version": "1.0.0",
   "private": true,
-  "description": "StackForge SaaS authentication API with register, login, me, refresh-token and logout.",
+  "description": "StackForge, the API scaffold generator",
   "main": "index.js",
   "scripts": {
     "dev:new-project": "node scripts/new-auth-project.mjs",

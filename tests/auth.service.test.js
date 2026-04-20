@@ -3,15 +3,18 @@ import jwt from 'jsonwebtoken';
 import { db } from '../src/db/database.js';
 import { env } from '../src/config/env.js';
 import {
+  clearAccessTokenBlacklistForTests,
   getUserById,
   login,
   logout,
+  revokeAccessToken,
   refreshSession,
   register,
   validateAccessToken,
 } from '../src/modules/auth/auth.service.js';
 import { HttpError } from '../src/utils/http-error.js';
 import {
+  seedFamilyExpiredRefreshToken,
   resetTestDatabase,
   seedExpiredRefreshToken,
   seedTestUser,
@@ -22,6 +25,7 @@ const activeAccessSecret = env.JWT_ACCESS_KEYRING[env.JWT_ACCESS_ACTIVE_KID];
 describe('auth service', () => {
   beforeEach(async () => {
     await resetTestDatabase();
+    clearAccessTokenBlacklistForTests();
   });
 
   it('registers a new user and stores hashed credentials', async () => {
@@ -145,16 +149,34 @@ describe('auth service', () => {
     expect(db.data.refreshTokens[0].revokedAt).toEqual(expect.any(String));
   });
 
-  it('logs out and revokes the refresh token', async () => {
+  it('logs out and revokes the full refresh token family', async () => {
     const user = await seedTestUser();
     const firstLogin = await login({
       email: user.email,
       password: 'StrongPass123',
     });
 
+    const rotatedSession = await refreshSession(firstLogin.refreshToken);
+
     await logout(firstLogin.refreshToken);
 
     expect(db.data.refreshTokens[0].revokedAt).toEqual(expect.any(String));
+    expect(db.data.refreshTokens[1].revokedAt).toEqual(expect.any(String));
+
+    await expect(refreshSession(rotatedSession.refreshToken)).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Refresh token reuse detected. Session revoked.',
+    });
+  });
+
+  it('rejects refresh when family absolute ttl has expired', async () => {
+    await seedTestUser();
+    const expiredFamilyToken = seedFamilyExpiredRefreshToken('user-1');
+
+    await expect(refreshSession(expiredFamilyToken)).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Session expired. Please log in again.',
+    });
   });
 
   it('rejects logout without token', async () => {
@@ -213,6 +235,18 @@ describe('auth service', () => {
     );
 
     expect(() => validateAccessToken(expiredToken)).toThrowError(HttpError);
+  });
+
+  it('rejects a blacklisted access token', async () => {
+    const user = await seedTestUser();
+    const session = await login({
+      email: user.email,
+      password: 'StrongPass123',
+    });
+
+    revokeAccessToken(session.accessToken);
+
+    expect(() => validateAccessToken(session.accessToken)).toThrowError(HttpError);
   });
 
   it('gets user by id', async () => {

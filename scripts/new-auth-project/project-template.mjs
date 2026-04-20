@@ -62,10 +62,10 @@ export async function removeGeneratedScaffoldRuntime(destinationProjectDir) {
       .replace(/^import \{ initializeDownloadsManager \} from '\.\/modules\/scaffold\/downloads-manager\.js';\r?\n/m, '')
       .replace(/^import \{ scaffoldRouter \} from '\.\/modules\/scaffold\/scaffold\.routes\.js';\r?\n/m, '')
       .replace(/^\s*\/\/ Initialize downloads manager\r?\n/m, '')
-      .replace(/^const downloadsDir = path\.resolve\(process\.cwd\(\), 'web', 'public', 'downloads'\);\r?\n/m, '')
-      .replace(/^initializeDownloadsManager\(downloadsDir\);\r?\n/m, '')
-      .replace(/^app\.locals\.downloadsDir = downloadsDir;\r?\n/m, '')
-      .replace(/^app\.use\('\/api\/scaffold', scaffoldRouter\);\r?\n/m, '');
+      .replace(/^\s*const downloadsDir = path\.resolve\(process\.cwd\(\), 'web', 'public', 'downloads'\);\r?\n/m, '')
+      .replace(/^\s*initializeDownloadsManager\(downloadsDir\);\r?\n/m, '')
+      .replace(/^\s*app\.locals\.downloadsDir = downloadsDir;\r?\n/m, '')
+      .replace(/^\s*app\.use\('\/api\/scaffold', scaffoldRouter\);\r?\n/m, '');
 
     if (appUpdated !== appRaw) {
       await writeFile(appPath, appUpdated, 'utf8');

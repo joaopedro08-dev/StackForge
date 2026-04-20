@@ -25,6 +25,8 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(16).default('change-this-access-secret-please'),
   ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  REFRESH_TOKEN_ABSOLUTE_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  EMAIL_VERIFICATION_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(60),
   EMAIL_ENABLED: z
     .enum(['true', 'false'])
     .default('false')
