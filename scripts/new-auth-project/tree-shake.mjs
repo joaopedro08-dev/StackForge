@@ -133,7 +133,11 @@ function removeAppAuthBlock(source) {
 function removeAppEmailBlock(source) {
   return source
     .replace(/^import \{ emailRouter \} from '\.\/(?:modules\/email|interfaces\/http)\/email\.routes(?:\.js)?';\r?\n/m, '')
-    .replace(/^[ \t]*if \(env\.EMAIL_ENABLED\) \{\r?\n[ \t]*app\.use\('\/email', emailRouter\);\r?\n[ \t]*\}\r?\n/m, '');
+    .replace(/^[ \t]*if \(env\.EMAIL_ENABLED\) \{\r?\n[ \t]*app\.use\('\/email', emailRouter\);\r?\n[ \t]*\}\r?\n/m, '')
+    .replace(
+      /function resolveOpenApiDocument\(\) \{\r?\n[ \t]*if \(env\.EMAIL_ENABLED\) \{\r?\n[ \t]*return openApiDocument;\r?\n[ \t]*\}\r?\n\r?\n[ \t]*const clonedDocument = structuredClone\(openApiDocument\);\r?\n[ \t]*delete clonedDocument\.paths\['\/email\/send'\];\r?\n[ \t]*return clonedDocument;\r?\n\}/m,
+      'function resolveOpenApiDocument() {\n  return openApiDocument;\n}',
+    );
 }
 
 function removeGraphQlRuntime(source) {

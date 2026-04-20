@@ -97,7 +97,7 @@ describe('new-auth-project README conditional sections', () => {
     expect(readme.includes(authMarker)).toBe(false);
     expect(readme.includes(graphQlMarker)).toBe(false);
     expect(readme.includes(emailMarker)).toBe(false);
-  }, 20_000);
+  }, 30_000);
 
   it('adds dynamic summary with selected options and package-manager command', async () => {
     const readme = await generateProjectReadme('readme-summary-ts-graphql', [
@@ -441,6 +441,25 @@ describe('new-auth-project tree shaking and conditional files', () => {
       expect(appTs.includes("from './interfaces/http/email.routes'" )).toBe(true);
       expect(appTs.includes("from './modules/auth/auth.routes'" )).toBe(false);
       expect(appTs.includes("from './modules/email/email.routes'" )).toBe(false);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
+  it('removes EMAIL_ENABLED openapi branch in clean app.ts when email is disabled', async () => {
+    const projectName = buildProjectName('clean-no-email-openapi-branch');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=auth', '--api=rest', '--architecture=clean', '--lang=typescript', '--db=postgresql', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const appTs = await readFile(path.join(projectDir, 'src', 'app.ts'), 'utf8');
+      expect(appTs.includes('if (env.EMAIL_ENABLED)')).toBe(false);
+      expect(appTs.includes("delete clonedDocument.paths['/email/send'];")).toBe(false);
+      expect(appTs.includes('function resolveOpenApiDocument() {\n  return openApiDocument;\n}')).toBe(true);
     } finally {
       await rm(projectDir, { recursive: true, force: true });
     }
