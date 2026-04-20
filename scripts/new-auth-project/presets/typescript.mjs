@@ -147,6 +147,7 @@ export default tseslint.config(
   await writeExpressAugmentation(destinationProjectDir);
   await rewriteTypeScriptCoreFiles(destinationProjectDir);
   await rewriteTypeScriptRepositoryFile(destinationProjectDir);
+  await rewriteArchitectureExamplesToTypeScript(destinationProjectDir);
 }
 
 async function rewriteTypeScriptRepositoryFile(destinationProjectDir) {
@@ -1080,6 +1081,296 @@ export async function getUserById(userId: string): Promise<PublicUser> {
 `,
     'utf8',
   );
+}
+
+async function rewriteArchitectureExamplesToTypeScript(destinationProjectDir) {
+  // Rewrite MVC examples with types
+  const mvcControllerExamplePath = path.join(destinationProjectDir, 'src', 'controllers', 'auth.controller.example.ts');
+  const mvcControllerExampleStat = await stat(mvcControllerExamplePath).catch(() => null);
+  if (mvcControllerExampleStat?.isFile()) {
+    await writeFile(
+      mvcControllerExamplePath,
+      `import type { NextFunction, Request, Response } from 'express';
+
+type UserPayload = {
+  name?: string;
+  email?: string;
+  password?: string;
+};
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+// Example service stub (replace with a real service module import).
+async function registerExampleService(payload: UserPayload): Promise<User> {
+  return {
+    id: 'example-user-id',
+    name: payload.name ?? 'Example User',
+    email: String(payload.email ?? '').trim().toLowerCase(),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+// Example presenter (replace with view/presenter from src/views).
+function toUserResponseView(user: User): User {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
+  };
+}
+
+// Example controller: parse input, call service and map output.
+export async function registerExampleController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const payload: UserPayload = {
+      name: req.body?.name,
+      email: req.body?.email,
+      password: req.body?.password,
+    };
+
+    const createdUser = await registerExampleService(payload);
+
+    res.status(201).json({
+      user: toUserResponseView(createdUser),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+`,
+      'utf8',
+    );
+  }
+
+  const mvcModelExamplePath = path.join(destinationProjectDir, 'src', 'models', 'user.model.example.ts');
+  const mvcModelExampleStat = await stat(mvcModelExamplePath).catch(() => null);
+  if (mvcModelExampleStat?.isFile()) {
+    await writeFile(
+      mvcModelExamplePath,
+      `type UserModelInput = {
+  id?: string;
+  name?: string;
+  email?: string;
+  createdAt?: string;
+};
+
+type UserModel = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+// Example model helper: keep domain shaping logic here.
+export function createUserModel(input: UserModelInput = {}): UserModel {
+  return {
+    id: input.id ?? 'example-user-id',
+    name: input.name ?? 'Example User',
+    email: String(input.email ?? '').trim().toLowerCase(),
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+}
+`,
+      'utf8',
+    );
+  }
+
+  const mvcRoutesExamplePath = path.join(destinationProjectDir, 'src', 'routes', 'auth.routes.example.ts');
+  const mvcRoutesExampleStat = await stat(mvcRoutesExamplePath).catch(() => null);
+  if (mvcRoutesExampleStat?.isFile()) {
+    await writeFile(
+      mvcRoutesExamplePath,
+      `import { Router } from 'express';
+import { registerExampleController } from '../controllers/auth.controller.example';
+
+const router = Router();
+
+router.post('/auth/register', registerExampleController);
+
+export { router as authExampleRouter };
+`,
+      'utf8',
+    );
+  }
+
+  const mvcViewExamplePath = path.join(destinationProjectDir, 'src', 'views', 'auth.view.example.ts');
+  const mvcViewExampleStat = await stat(mvcViewExamplePath).catch(() => null);
+  if (mvcViewExampleStat?.isFile()) {
+    await writeFile(
+      mvcViewExamplePath,
+      `type User = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+// Example response mapper used by controllers.
+export function toAuthUserView(user: User): User {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
+  };
+}
+`,
+      'utf8',
+    );
+  }
+
+  // Rewrite Clean examples with types
+  const cleanDomainExamplePath = path.join(destinationProjectDir, 'src', 'domain', 'user.entity.example.ts');
+  const cleanDomainExampleStat = await stat(cleanDomainExamplePath).catch(() => null);
+  if (cleanDomainExampleStat?.isFile()) {
+    await writeFile(
+      cleanDomainExamplePath,
+      `type UserEntityInput = {
+  id?: string;
+  name?: string;
+  email?: string;
+  createdAt?: string;
+};
+
+type UserEntity = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+// Domain entity example: validate invariants here.
+export function createUserEntity(input: UserEntityInput = {}): UserEntity {
+  const email = String(input.email ?? '').trim().toLowerCase();
+
+  if (!email) {
+    throw new Error('email is required');
+  }
+
+  return {
+    id: input.id ?? 'example-user-id',
+    name: input.name ?? 'Example User',
+    email,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+}
+`,
+      'utf8',
+    );
+  }
+
+  const cleanUseCaseExamplePath = path.join(destinationProjectDir, 'src', 'application', 'register-user.use-case.example.ts');
+  const cleanUseCaseExampleStat = await stat(cleanUseCaseExamplePath).catch(() => null);
+  if (cleanUseCaseExampleStat?.isFile()) {
+    await writeFile(
+      cleanUseCaseExamplePath,
+      `type UserEntity = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+type UserRepository = {
+  save(user: UserEntity): Promise<void>;
+};
+
+type UseCaseDependencies = {
+  createUserEntity: (input: unknown) => UserEntity;
+  userRepository: UserRepository;
+};
+
+// Application use-case example: orchestrate domain + repository ports.
+export async function registerUserUseCase(input: unknown, dependencies: UseCaseDependencies): Promise<UserEntity> {
+  const { createUserEntity, userRepository } = dependencies;
+
+  const user = createUserEntity(input);
+  await userRepository.save(user);
+
+  return user;
+}
+`,
+      'utf8',
+    );
+  }
+
+  const cleanRepositoryExamplePath = path.join(destinationProjectDir, 'src', 'infrastructure', 'user.repository.example.ts');
+  const cleanRepositoryExampleStat = await stat(cleanRepositoryExamplePath).catch(() => null);
+  if (cleanRepositoryExampleStat?.isFile()) {
+    await writeFile(
+      cleanRepositoryExamplePath,
+      `type UserEntity = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+type DatabaseClient = {
+  users: {
+    insert(user: UserEntity): Promise<void>;
+  };
+};
+
+type UserRepositoryAdapter = {
+  save(user: UserEntity): Promise<void>;
+};
+
+// Infrastructure adapter example: concrete persistence implementation.
+export function createUserRepositoryAdapter(dbClient: DatabaseClient): UserRepositoryAdapter {
+  return {
+    async save(user: UserEntity): Promise<void> {
+      await dbClient.users.insert(user);
+    },
+  };
+}
+`,
+      'utf8',
+    );
+  }
+
+  const cleanControllerExamplePath = path.join(destinationProjectDir, 'src', 'interfaces', 'http', 'auth.controller.example.ts');
+  const cleanControllerExampleStat = await stat(cleanControllerExamplePath).catch(() => null);
+  if (cleanControllerExampleStat?.isFile()) {
+    await writeFile(
+      cleanControllerExamplePath,
+      `import type { NextFunction, Request, Response } from 'express';
+
+type UserEntity = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+type ControllerDependencies = {
+  registerUserUseCase: (input: unknown, deps: ControllerDependencies) => Promise<UserEntity>;
+};
+
+// HTTP controller example: parse request and delegate to use-case.
+export async function registerControllerExample(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  dependencies: ControllerDependencies,
+): Promise<void> {
+  try {
+    const user = await dependencies.registerUserUseCase(req.body, dependencies);
+    res.status(201).json({ user });
+  } catch (error) {
+    next(error);
+  }
+}
+`,
+      'utf8',
+    );
+  }
 }
 
 async function renameJavaScriptFilesRecursively(baseDir) {
