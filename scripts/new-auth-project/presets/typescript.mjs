@@ -203,8 +203,8 @@ type RepositoryLoginAttempt = {
 
   let repositoryUpdated = repositoryRaw
     .replace(
-      "import { getPrismaClient } from '../db/prisma-client';",
-      `import { getPrismaClient } from '../db/prisma-client';\n${repositoryTypesBlock}`,
+      "import { env } from '../config/env';",
+      `import { env } from '../config/env';\n${repositoryTypesBlock}`,
     )
     .replace(/\/\*\*[\s\S]*?\*\/\r?\n/gm, '')
     .replace('function clone(value) {', 'function clone<T>(value: T): T {')

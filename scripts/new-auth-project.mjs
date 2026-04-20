@@ -21,6 +21,7 @@ import { configureGeneratedApiStyle } from './new-auth-project/api-style.mjs';
 import { applyJavaScriptPreset, applyTypeScriptPreset } from './new-auth-project/language-presets.mjs';
 import { configureGeneratedPackageManager } from './new-auth-project/package-manager.mjs';
 import { configureGeneratedFeatures } from './new-auth-project/features.mjs';
+import { applyGeneratedTreeShaking } from './new-auth-project/tree-shake.mjs';
 import { updateGeneratedReadmeSummary } from './new-auth-project/readme.mjs';
 import { getErrorMessage, runScaffoldStep } from './new-auth-project/scaffold-utils.mjs';
 
@@ -151,6 +152,16 @@ async function main() {
 
   await runScaffoldStep(`configure_features:${featureSet}`, async () => {
     await configureGeneratedFeatures(destinationProjectDir, featureSet, apiStyle);
+  });
+
+  await runScaffoldStep('tree_shake_generated_project', async () => {
+    await applyGeneratedTreeShaking(destinationProjectDir, {
+      language,
+      database,
+      architecture,
+      apiStyle,
+      featureSet,
+    });
   });
 
   await runScaffoldStep('normalize_mvc_structure', async () => {

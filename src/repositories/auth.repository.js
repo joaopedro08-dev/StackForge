@@ -1,6 +1,5 @@
 import { db } from '../db/database.js';
 import { env } from '../config/env.js';
-import { getPrismaClient } from '../db/prisma-client.js';
 
 /**
  * @typedef {Object} RepositoryUser
@@ -55,6 +54,11 @@ function ensureSupportedProvider() {
   throw new Error(
     `Database provider "${env.DATABASE_PROVIDER}" is not implemented yet. Use "json", "postgresql", "mysql", "sqlite" or "sqlserver".`,
   );
+}
+
+async function getPrismaClient() {
+  const prismaModule = await import('../db/prisma-client.js');
+  return prismaModule.getPrismaClient();
 }
 
 /** @param {any} user */

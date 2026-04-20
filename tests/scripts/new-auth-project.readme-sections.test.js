@@ -97,7 +97,7 @@ describe('new-auth-project README conditional sections', () => {
     expect(readme.includes(authMarker)).toBe(false);
     expect(readme.includes(graphQlMarker)).toBe(false);
     expect(readme.includes(emailMarker)).toBe(false);
-  });
+  }, 20_000);
 
   it('adds dynamic summary with selected options and package-manager command', async () => {
     const readme = await generateProjectReadme('readme-summary-ts-graphql', [
@@ -395,6 +395,129 @@ describe('new-auth-project package.json conditional filtering', () => {
       const schemaRaw = await readFile(path.join(projectDir, 'prisma', 'schema.prisma'), 'utf8');
       expect(schemaRaw.includes('provider = "mysql"')).toBe(true);
       expect(schemaRaw.includes('provider = "postgresql"')).toBe(false);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+});
+
+describe('new-auth-project tree shaking and conditional files', () => {
+  it('tree shakes app.ts imports and routes when auth/email/graphql are disabled', async () => {
+    const projectName = buildProjectName('app-tree-shake-none');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=none', '--api=rest', '--architecture=layered', '--lang=typescript', '--db=json', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const appTs = await readFile(path.join(projectDir, 'src', 'app.ts'), 'utf8');
+      expect(appTs.includes("import cookieParser from 'cookie-parser';")).toBe(false);
+      expect(appTs.includes('authRateLimiter')).toBe(false);
+      expect(appTs.includes('authRouter')).toBe(false);
+      expect(appTs.includes('emailRouter')).toBe(false);
+      expect(appTs.includes('mountGraphQLIfEnabled')).toBe(false);
+      expect(appTs.includes("./graphql/server")).toBe(false);
+      expect(appTs.includes("app.use('/auth', authRateLimiter, authRouter);")).toBe(false);
+      expect(appTs.includes("app.use('/email', emailRouter);")).toBe(false);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
+  it('uses interfaces/http imports in clean app.ts and never modules/* routes', async () => {
+    const projectName = buildProjectName('clean-app-imports');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=both', '--api=hybrid', '--architecture=clean', '--lang=typescript', '--db=postgresql', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const appTs = await readFile(path.join(projectDir, 'src', 'app.ts'), 'utf8');
+      expect(appTs.includes("from './interfaces/http/auth.routes'" )).toBe(true);
+      expect(appTs.includes("from './interfaces/http/email.routes'" )).toBe(true);
+      expect(appTs.includes("from './modules/auth/auth.routes'" )).toBe(false);
+      expect(appTs.includes("from './modules/email/email.routes'" )).toBe(false);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
+  it('removes feature-specific files when features are disabled', async () => {
+    const projectName = buildProjectName('feature-files-none');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=none', '--api=rest', '--architecture=layered', '--lang=typescript', '--db=json', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const authMiddlewareStat = await stat(path.join(projectDir, 'src', 'middlewares', 'auth.middleware.ts')).catch(() => null);
+      const csrfMiddlewareStat = await stat(path.join(projectDir, 'src', 'middlewares', 'csrf.middleware.ts')).catch(() => null);
+      const rateLimitMiddlewareStat = await stat(path.join(projectDir, 'src', 'middlewares', 'rate-limit.middleware.ts')).catch(() => null);
+      const authModuleStat = await stat(path.join(projectDir, 'src', 'modules', 'auth')).catch(() => null);
+      const emailModuleStat = await stat(path.join(projectDir, 'src', 'modules', 'email')).catch(() => null);
+      const graphQlDirStat = await stat(path.join(projectDir, 'src', 'graphql')).catch(() => null);
+
+      expect(authMiddlewareStat).toBeNull();
+      expect(csrfMiddlewareStat).toBeNull();
+      expect(rateLimitMiddlewareStat).toBeNull();
+      expect(authModuleStat).toBeNull();
+      expect(emailModuleStat).toBeNull();
+      expect(graphQlDirStat).toBeNull();
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
+  it('generates db files conditionally for json provider', async () => {
+    const projectName = buildProjectName('db-json-conditional');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=auth', '--api=rest', '--architecture=layered', '--lang=typescript', '--db=json', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const databaseStat = await stat(path.join(projectDir, 'src', 'db', 'database.ts')).catch(() => null);
+      const prismaClientStat = await stat(path.join(projectDir, 'src', 'db', 'prisma-client.ts')).catch(() => null);
+      const healthRaw = await readFile(path.join(projectDir, 'src', 'db', 'health.ts'), 'utf8');
+      const repositoryRaw = await readFile(path.join(projectDir, 'src', 'repositories', 'auth.repository.ts'), 'utf8');
+
+      expect(databaseStat?.isFile()).toBe(true);
+      expect(prismaClientStat).toBeNull();
+      expect(healthRaw.includes("from './database'" )).toBe(true);
+      expect(healthRaw.includes("from './prisma-client'" )).toBe(false);
+      expect(repositoryRaw.includes("import { getPrismaClient } from '../db/prisma-client'" )).toBe(false);
+      expect(repositoryRaw.includes("await import('../db/prisma-client'" )).toBe(true);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
+  it('generates db files conditionally for relational provider', async () => {
+    const projectName = buildProjectName('db-relational-conditional');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=none', '--api=rest', '--architecture=layered', '--lang=typescript', '--db=mysql', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const databaseStat = await stat(path.join(projectDir, 'src', 'db', 'database.ts')).catch(() => null);
+      const prismaClientStat = await stat(path.join(projectDir, 'src', 'db', 'prisma-client.ts')).catch(() => null);
+      const healthRaw = await readFile(path.join(projectDir, 'src', 'db', 'health.ts'), 'utf8');
+
+      expect(databaseStat).toBeNull();
+      expect(prismaClientStat?.isFile()).toBe(true);
+      expect(healthRaw.includes("from './prisma-client'" )).toBe(true);
+      expect(healthRaw.includes("from './database'" )).toBe(false);
     } finally {
       await rm(projectDir, { recursive: true, force: true });
     }
