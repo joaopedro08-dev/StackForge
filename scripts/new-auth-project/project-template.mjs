@@ -56,7 +56,7 @@ function buildDynamicDescription(projectName, options) {
   return `${projectName} generated with StackForge${suffix}`;
 }
 
-function buildDynamicKeywords(projectName, options) {
+function buildDynamicKeywords(options) {
   const keywords = new Set(['stackforge', 'api', 'express', options.language, options.architecture, options.apiStyle, options.database]);
 
   if (hasAuthFeature(options.featureSet)) {
@@ -76,12 +76,6 @@ function buildDynamicKeywords(projectName, options) {
 
   if (options.apiStyle === 'graphql' || options.apiStyle === 'hybrid') {
     keywords.add('graphql');
-  }
-
-  for (const token of projectName.toLowerCase().split(/[^a-z0-9]+/g)) {
-    if (token) {
-      keywords.add(token);
-    }
   }
 
   return Array.from(keywords);
@@ -126,7 +120,7 @@ export async function finalizeGeneratedPackageJson(destinationProjectDir, option
 
   packageJson.name = options.projectName;
   packageJson.description = buildDynamicDescription(options.projectName, options);
-  packageJson.keywords = buildDynamicKeywords(options.projectName, options);
+  packageJson.keywords = buildDynamicKeywords(options);
 
   packageJson.scripts = ensureObject(packageJson.scripts);
   packageJson.dependencies = ensureObject(packageJson.dependencies);

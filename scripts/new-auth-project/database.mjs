@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readFile, writeFile, stat } from 'node:fs/promises';
+import { readFile, rm, writeFile, stat } from 'node:fs/promises';
 
 function getDefaultDatabaseUrl(databaseProvider) {
   if (databaseProvider === 'postgresql') {
@@ -105,6 +105,11 @@ async function updateGeneratedPrismaSchemaProvider(destinationProjectDir, databa
     return;
   }
 
+  if (databaseProvider === 'json') {
+    await rm(path.join(destinationProjectDir, 'prisma'), { recursive: true, force: true });
+    return;
+  }
+
   const schemaRaw = await readFile(schemaPath, 'utf8');
   let schemaUpdated = schemaRaw.replace(
     /datasource\s+db\s*\{([\s\S]*?)provider\s*=\s*"[^"]+"/m,
@@ -124,10 +129,6 @@ export async function configureGeneratedDatabase(destinationProjectDir, database
   await updateGeneratedEnvFiles(destinationProjectDir, databaseProvider);
   await updateGeneratedPackageJsonDatabaseSettings(destinationProjectDir, databaseProvider);
   await updateGeneratedDockerfileDatabaseStartup(destinationProjectDir, databaseProvider);
-
-  if (databaseProvider === 'json') {
-    return;
-  }
 
   await updateGeneratedPrismaSchemaProvider(destinationProjectDir, databaseProvider);
 }

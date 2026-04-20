@@ -74,7 +74,18 @@ function resolveEnabledApis(apiStyle, featureSet) {
 
 function resolveArchitectureNotes(architecture) {
   if (architecture !== 'mvc') {
-    return '';
+    if (architecture !== 'layered') {
+      return '';
+    }
+
+    return [
+      'Layered folder contract:',
+      '',
+      '- `src/modules` - feature modules and orchestration',
+      '- `src/repositories` - persistence adapters',
+      '- `src/middlewares` - request guards and context',
+      '- `src/utils` - shared helpers',
+    ].join('\n');
   }
 
   return [
@@ -91,7 +102,7 @@ function resolveArchitectureNotes(architecture) {
 }
 
 function resolveExampleFilesNote(architecture) {
-  if (architecture !== 'mvc' && architecture !== 'clean') {
+  if (architecture !== 'mvc' && architecture !== 'clean' && architecture !== 'layered') {
     return '';
   }
 

@@ -272,6 +272,151 @@ export async function registerControllerExample(req, res, next, dependencies) {
   );
 }
 
+async function scaffoldLayeredGuidanceFiles(destinationProjectDir) {
+  const modulesDir = path.join(destinationProjectDir, 'src', 'modules');
+  const exampleModuleDir = path.join(modulesDir, 'example');
+  const repositoriesDir = path.join(destinationProjectDir, 'src', 'repositories');
+  const middlewaresDir = path.join(destinationProjectDir, 'src', 'middlewares');
+  const utilsDir = path.join(destinationProjectDir, 'src', 'utils');
+
+  await mkdir(exampleModuleDir, { recursive: true });
+  await mkdir(repositoriesDir, { recursive: true });
+  await mkdir(middlewaresDir, { recursive: true });
+  await mkdir(utilsDir, { recursive: true });
+
+  await writeFileIfMissing(
+    path.join(modulesDir, 'README.md'),
+    `# Modules
+
+Feature modules organized by business flow.
+
+Typical responsibilities:
+- keep controllers and services close to the feature they serve
+- compose request handling and orchestration within the feature boundary
+- delegate persistence to repositories and shared helpers to utilities
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(exampleModuleDir, 'README.md'),
+    `# Example Module
+
+This feature module shows the layered split between controller and service.
+
+Use it as a template when adding a real feature module.
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(repositoriesDir, 'README.md'),
+    `# Repositories
+
+Concrete data access adapters live here.
+
+Keep persistence code isolated from controllers and services.
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(middlewaresDir, 'README.md'),
+    `# Middlewares
+
+Cross-cutting request handling, guards, and transport-level checks.
+
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(utilsDir, 'README.md'),
+    `# Utils
+
+Shared helpers used across modules, services, and infrastructure.
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(exampleModuleDir, 'example.controller.example.js'),
+    `import { createExampleService } from './example.service.example.js';
+
+// Layered controller example: map request to service input and shape the response.
+export async function createExampleController(req, res, next) {
+  try {
+    const service = createExampleService({ repository: req.context?.exampleRepository });
+    const result = await service.create({
+      name: req.body?.name,
+      email: req.body?.email,
+    });
+
+    res.status(201).json({
+      user: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(exampleModuleDir, 'example.service.example.js'),
+    `import { normalizeExampleEmail } from '../../utils/example.util.example.js';
+
+// Layered service example: orchestrate business flow and repository access.
+export function createExampleService({ repository }) {
+  return {
+    async create(input) {
+      const user = {
+        id: 'example-user-id',
+        name: input.name ?? 'Example User',
+        email: normalizeExampleEmail(input.email),
+        createdAt: new Date().toISOString(),
+      };
+
+      await repository.save(user);
+      return user;
+    },
+  };
+}
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(repositoriesDir, 'example.repository.example.js'),
+    `// Repository example: isolate persistence details from the service layer.
+export function createExampleRepository(dbClient) {
+  return {
+    async save(user) {
+      await dbClient.users.insert(user);
+    },
+  };
+}
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(middlewaresDir, 'example.middleware.example.js'),
+    `// Middleware example: attach feature-specific context before the controller runs.
+export function exampleRequestContext(req, _res, next) {
+  req.context = {
+    ...(req.context ?? {}),
+    exampleFeature: true,
+  };
+
+  next();
+}
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(utilsDir, 'example.util.example.js'),
+    `// Shared helper example used by the layered service.
+export function normalizeExampleEmail(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+`,
+  );
+}
+
 function getArchitectureGuideContent(architecture) {
   if (architecture === 'mvc') {
     return `# MVC Scaffold Guide
@@ -324,6 +469,12 @@ Current default structure already follows layered boundaries:
 - modules/controllers/services for feature flow
 - repositories for persistence abstraction
 - db for adapter and health layers
+
+Example layering guide:
+- src/modules/example for controller + service orchestration
+- src/repositories for persistence adapters
+- src/middlewares for request guards and context
+- src/utils for shared helpers
 `;
 }
 
@@ -331,7 +482,7 @@ export async function configureGeneratedArchitecture(destinationProjectDir, arch
   const architectureDirsByType = {
     mvc: ['src/models', 'src/views', 'src/controllers', 'src/config', 'src/middlewares', 'src/routes', 'src/utils'],
     clean: ['src/domain', 'src/application', 'src/infrastructure', 'src/interfaces/http'],
-    layered: [],
+    layered: ['src/modules', 'src/modules/example', 'src/repositories', 'src/middlewares', 'src/utils'],
   };
 
   const directoriesToCreate = architectureDirsByType[architecture] || [];
@@ -349,6 +500,10 @@ export async function configureGeneratedArchitecture(destinationProjectDir, arch
 
   if (architecture === 'clean') {
     await scaffoldCleanGuidanceFiles(destinationProjectDir);
+  }
+
+  if (architecture === 'layered') {
+    await scaffoldLayeredGuidanceFiles(destinationProjectDir);
   }
 }
 

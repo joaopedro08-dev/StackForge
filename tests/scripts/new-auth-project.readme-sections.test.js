@@ -122,7 +122,7 @@ describe('new-auth-project README conditional sections', () => {
     expect(readme.includes('npm run dev')).toBe(true);
     expect(readme.includes('GraphQL endpoint: /graphql')).toBe(true);
     expect(readme.includes('Email endpoint: /email/send')).toBe(true);
-  });
+  }, 20_000);
 
   it('removes auth and email routes for features=none in typescript projects', async () => {
     const projectName = buildProjectName('readme-none-ts-routes');
@@ -209,6 +209,64 @@ describe('new-auth-project README conditional sections', () => {
       await rm(projectDir, { recursive: true, force: true });
     }
   }, 20_000);
+
+  it('keeps layered example files distributed across layers for features=none', async () => {
+    const projectName = buildProjectName('layered-none-example-distribution');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=none', '--architecture=layered', '--lang=typescript', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const expectedFiles = [
+        'src/modules/example/example.controller.example.ts',
+        'src/modules/example/example.service.example.ts',
+        'src/repositories/example.repository.example.ts',
+        'src/middlewares/example.middleware.example.ts',
+        'src/utils/example.util.example.ts',
+      ];
+
+      for (const relativeFilePath of expectedFiles) {
+        const fileStat = await stat(path.join(projectDir, relativeFilePath)).catch(() => null);
+        expect(fileStat?.isFile()).toBe(true);
+      }
+
+      const layeredModulesDirStat = await stat(path.join(projectDir, 'src', 'modules')).catch(() => null);
+      expect(layeredModulesDirStat?.isDirectory()).toBe(true);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
+  it('keeps clean example files distributed across layers for features=none', async () => {
+    const projectName = buildProjectName('clean-none-example-distribution');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=none', '--architecture=clean', '--lang=typescript', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const controllerRaw = await readFile(path.join(projectDir, 'src', 'interfaces', 'http', 'auth.controller.example.ts'), 'utf8');
+      const useCaseRaw = await readFile(path.join(projectDir, 'src', 'application', 'register-user.use-case.example.ts'), 'utf8');
+      const repositoryRaw = await readFile(path.join(projectDir, 'src', 'infrastructure', 'user.repository.example.ts'), 'utf8');
+      const domainRaw = await readFile(path.join(projectDir, 'src', 'domain', 'user.entity.example.ts'), 'utf8');
+
+      expect(domainRaw.includes('export type UserEntityInput')).toBe(true);
+      expect(domainRaw.includes('export type UserEntity')).toBe(true);
+      expect(useCaseRaw.includes("import { createUserEntity } from '../domain/user.entity.example';")).toBe(true);
+      expect(useCaseRaw.includes("import type { UserEntity } from '../domain/user.entity.example';")).toBe(true);
+      expect(repositoryRaw.includes("import type { UserEntity } from '../domain/user.entity.example';")).toBe(true);
+      expect(controllerRaw.includes("import { registerUserUseCase } from '../../application/register-user.use-case.example';")).toBe(true);
+      expect(controllerRaw.includes("import type { UserEntity } from '../../domain/user.entity.example';")).toBe(true);
+      expect(controllerRaw.includes('registerUserUseCase(req.body, dependencies)')).toBe(true);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
 });
 
 describe('new-auth-project package.json conditional filtering', () => {
@@ -249,6 +307,7 @@ describe('new-auth-project package.json conditional filtering', () => {
     expect(packageJson.keywords).toContain('rest');
     expect(packageJson.keywords).toContain('json');
     expect(packageJson.keywords).toContain('lowdb');
+    expect(packageJson.keywords.some((keyword) => /\d/.test(keyword))).toBe(false);
   }, 20_000);
 
   it('keeps auth dependencies and auth-related types only when auth is enabled', async () => {
@@ -301,5 +360,43 @@ describe('new-auth-project package.json conditional filtering', () => {
     expect(packageJson.scripts['test:scaffold:readme']).toBeUndefined();
     expect(packageJson.scripts['test:scaffold:arch-api']).toBeUndefined();
     expect(packageJson.scripts['test:scaffold:full-runtime']).toBeUndefined();
+  }, 20_000);
+
+  it('removes prisma schema for json database projects', async () => {
+    const projectName = buildProjectName('pkg-json-schema-removal');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=none', '--db=json', '--api=rest', '--architecture=layered', '--lang=javascript', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const schemaStat = await stat(path.join(projectDir, 'prisma', 'schema.prisma')).catch(() => null);
+      const prismaDirStat = await stat(path.join(projectDir, 'prisma')).catch(() => null);
+
+      expect(schemaStat).toBeNull();
+      expect(prismaDirStat).toBeNull();
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
+  it('keeps prisma schema provider aligned with relational database providers', async () => {
+    const projectName = buildProjectName('pkg-mysql-schema-provider');
+    const projectDir = path.join(projectsRootDir, projectName);
+
+    try {
+      await execFileAsync(process.execPath, [generatorPath, '--', projectName, '--features=none', '--db=mysql', '--api=rest', '--architecture=layered', '--lang=javascript', '--profile=lite'], {
+        cwd: rootDir,
+        env: process.env,
+      });
+
+      const schemaRaw = await readFile(path.join(projectDir, 'prisma', 'schema.prisma'), 'utf8');
+      expect(schemaRaw.includes('provider = "mysql"')).toBe(true);
+      expect(schemaRaw.includes('provider = "postgresql"')).toBe(false);
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
   }, 20_000);
 });

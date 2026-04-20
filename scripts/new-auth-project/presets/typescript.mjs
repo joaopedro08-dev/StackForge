@@ -1231,14 +1231,14 @@ export function toAuthUserView(user: User): User {
   if (cleanDomainExampleStat?.isFile()) {
     await writeFile(
       cleanDomainExamplePath,
-      `type UserEntityInput = {
+      `export type UserEntityInput = {
   id?: string;
   name?: string;
   email?: string;
   createdAt?: string;
 };
 
-type UserEntity = {
+export type UserEntity = {
   id: string;
   name: string;
   email: string;
@@ -1270,25 +1270,18 @@ export function createUserEntity(input: UserEntityInput = {}): UserEntity {
   if (cleanUseCaseExampleStat?.isFile()) {
     await writeFile(
       cleanUseCaseExamplePath,
-      `type UserEntity = {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string;
-};
-
-type UserRepository = {
-  save(user: UserEntity): Promise<void>;
-};
+      `import { createUserEntity } from '../domain/user.entity.example';
+import type { UserEntity } from '../domain/user.entity.example';
 
 type UseCaseDependencies = {
-  createUserEntity: (input: unknown) => UserEntity;
-  userRepository: UserRepository;
+  userRepository: {
+    save(user: UserEntity): Promise<void>;
+  };
 };
 
 // Application use-case example: orchestrate domain + repository ports.
 export async function registerUserUseCase(input: unknown, dependencies: UseCaseDependencies): Promise<UserEntity> {
-  const { createUserEntity, userRepository } = dependencies;
+  const { userRepository } = dependencies;
 
   const user = createUserEntity(input);
   await userRepository.save(user);
@@ -1305,12 +1298,7 @@ export async function registerUserUseCase(input: unknown, dependencies: UseCaseD
   if (cleanRepositoryExampleStat?.isFile()) {
     await writeFile(
       cleanRepositoryExamplePath,
-      `type UserEntity = {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string;
-};
+      `import type { UserEntity } from '../domain/user.entity.example';
 
 type DatabaseClient = {
   users: {
@@ -1318,12 +1306,8 @@ type DatabaseClient = {
   };
 };
 
-type UserRepositoryAdapter = {
-  save(user: UserEntity): Promise<void>;
-};
-
 // Infrastructure adapter example: concrete persistence implementation.
-export function createUserRepositoryAdapter(dbClient: DatabaseClient): UserRepositoryAdapter {
+export function createUserRepositoryAdapter(dbClient: DatabaseClient) {
   return {
     async save(user: UserEntity): Promise<void> {
       await dbClient.users.insert(user);
@@ -1341,31 +1325,184 @@ export function createUserRepositoryAdapter(dbClient: DatabaseClient): UserRepos
     await writeFile(
       cleanControllerExamplePath,
       `import type { NextFunction, Request, Response } from 'express';
-
-type UserEntity = {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string;
-};
-
-type ControllerDependencies = {
-  registerUserUseCase: (input: unknown, deps: ControllerDependencies) => Promise<UserEntity>;
-};
+import { registerUserUseCase } from '../../application/register-user.use-case.example';
+import type { UserEntity } from '../../domain/user.entity.example';
 
 // HTTP controller example: parse request and delegate to use-case.
 export async function registerControllerExample(
   req: Request,
   res: Response,
   next: NextFunction,
-  dependencies: ControllerDependencies,
+  dependencies: {
+    userRepository: {
+      save(user: UserEntity): Promise<void>;
+    };
+  },
 ): Promise<void> {
   try {
-    const user = await dependencies.registerUserUseCase(req.body, dependencies);
+    const user = await registerUserUseCase(req.body, dependencies);
     res.status(201).json({ user });
   } catch (error) {
     next(error);
   }
+}
+`,
+      'utf8',
+    );
+  }
+
+  const layeredModuleControllerPath = path.join(destinationProjectDir, 'src', 'modules', 'example', 'example.controller.example.ts');
+  const layeredModuleControllerStat = await stat(layeredModuleControllerPath).catch(() => null);
+  if (layeredModuleControllerStat?.isFile()) {
+    await writeFile(
+      layeredModuleControllerPath,
+      `import type { NextFunction, Request, Response } from 'express';
+import { createExampleService } from './example.service.example';
+
+type ExampleUser = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+type ExampleRepository = {
+  save(user: ExampleUser): Promise<void>;
+};
+
+type ExampleRequest = Request & {
+  context?: {
+    exampleRepository?: ExampleRepository;
+  };
+};
+
+// Layered controller example: map request to service input and shape the response.
+export async function createExampleController(req: ExampleRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const repository = req.context?.exampleRepository;
+    if (!repository) {
+      throw new Error('example repository is missing from request context');
+    }
+
+    const service = createExampleService(repository);
+    const result = await service.create({
+      name: req.body?.name,
+      email: req.body?.email,
+    });
+
+    res.status(201).json({ user: result });
+  } catch (error) {
+    next(error);
+  }
+}
+`,
+      'utf8',
+    );
+  }
+
+  const layeredModuleServicePath = path.join(destinationProjectDir, 'src', 'modules', 'example', 'example.service.example.ts');
+  const layeredModuleServiceStat = await stat(layeredModuleServicePath).catch(() => null);
+  if (layeredModuleServiceStat?.isFile()) {
+    await writeFile(
+      layeredModuleServicePath,
+      `import { normalizeExampleEmail } from '../../utils/example.util.example';
+
+type ExampleUser = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+type ExampleRepository = {
+  save(user: ExampleUser): Promise<void>;
+};
+
+// Layered service example: orchestrate business flow and repository access.
+export function createExampleService(repository: ExampleRepository) {
+  return {
+    async create(input: { name?: string; email?: string }): Promise<ExampleUser> {
+      const user: ExampleUser = {
+        id: 'example-user-id',
+        name: input.name ?? 'Example User',
+        email: normalizeExampleEmail(input.email),
+        createdAt: new Date().toISOString(),
+      };
+
+      await repository.save(user);
+      return user;
+    },
+  };
+}
+`,
+      'utf8',
+    );
+  }
+
+  const layeredRepositoryPath = path.join(destinationProjectDir, 'src', 'repositories', 'example.repository.example.ts');
+  const layeredRepositoryStat = await stat(layeredRepositoryPath).catch(() => null);
+  if (layeredRepositoryStat?.isFile()) {
+    await writeFile(
+      layeredRepositoryPath,
+      `type ExampleUser = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+type DatabaseClient = {
+  users: {
+    insert(user: ExampleUser): Promise<void>;
+  };
+};
+
+// Repository example: isolate persistence details from the service layer.
+export function createExampleRepository(dbClient: DatabaseClient) {
+  return {
+    async save(user: ExampleUser): Promise<void> {
+      await dbClient.users.insert(user);
+    },
+  };
+}
+`,
+      'utf8',
+    );
+  }
+
+  const layeredMiddlewarePath = path.join(destinationProjectDir, 'src', 'middlewares', 'example.middleware.example.ts');
+  const layeredMiddlewareStat = await stat(layeredMiddlewarePath).catch(() => null);
+  if (layeredMiddlewareStat?.isFile()) {
+    await writeFile(
+      layeredMiddlewarePath,
+      `import type { NextFunction, Request, Response } from 'express';
+
+// Middleware example: attach feature-specific context before the controller runs.
+export function exampleRequestContext(req: Request, _res: Response, next: NextFunction): void {
+  const requestWithContext = req as Request & {
+    context?: Record<string, unknown>;
+  };
+
+  requestWithContext.context = {
+    ...(requestWithContext.context ?? {}),
+    exampleFeature: true,
+  };
+
+  next();
+}
+`,
+      'utf8',
+    );
+  }
+
+  const layeredUtilPath = path.join(destinationProjectDir, 'src', 'utils', 'example.util.example.ts');
+  const layeredUtilStat = await stat(layeredUtilPath).catch(() => null);
+  if (layeredUtilStat?.isFile()) {
+    await writeFile(
+      layeredUtilPath,
+      `// Shared helper example used by the layered service.
+export function normalizeExampleEmail(value: string | undefined): string {
+  return String(value ?? '').trim().toLowerCase();
 }
 `,
       'utf8',
