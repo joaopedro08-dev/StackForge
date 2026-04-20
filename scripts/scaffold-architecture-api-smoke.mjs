@@ -90,7 +90,13 @@ async function validateApiStyle(projectDir, scenario) {
   const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
 
   assertCondition(envRaw.includes(`API_STYLE=${apiStyle}`), `.env.example should include API_STYLE=${apiStyle}`);
-  assertCondition(appRaw.includes('mountGraphQLIfEnabled'), 'App should include GraphQL mount helper');
+
+  const shouldHaveGraphQlHelper = apiStyle === 'graphql' || apiStyle === 'hybrid';
+  if (shouldHaveGraphQlHelper) {
+    assertCondition(appRaw.includes('mountGraphQLIfEnabled'), 'App should include GraphQL mount helper');
+  } else {
+    assertCondition(!appRaw.includes('mountGraphQLIfEnabled'), 'REST app should not include GraphQL mount helper');
+  }
 
   const hasGraphQlDeps =
     Boolean(packageJson.dependencies?.graphql) &&
