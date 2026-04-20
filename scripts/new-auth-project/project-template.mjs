@@ -65,7 +65,7 @@ export async function removeGeneratedScaffoldRuntime(destinationProjectDir) {
       .replace(/^\s*const downloadsDir = path\.resolve\(process\.cwd\(\), 'web', 'public', 'downloads'\);\r?\n/m, '')
       .replace(/^\s*initializeDownloadsManager\(downloadsDir\);\r?\n/m, '')
       .replace(/^\s*app\.locals\.downloadsDir = downloadsDir;\r?\n/m, '')
-      .replace(/^\s*app\.use\('\/api\/scaffold', scaffoldRouter\);\r?\n/m, '');
+      .replace(/^[ \t]*app\.use\('\/api\/scaffold', scaffoldRouter\);\r?\n/m, '');
 
     if (appUpdated !== appRaw) {
       await writeFile(appPath, appUpdated, 'utf8');

@@ -117,6 +117,8 @@ describe('new-auth-project README conditional sections', () => {
       const appTs = await readFile(path.join(projectDir, 'src', 'app.ts'), 'utf8');
       expect(appTs.includes("app.use('/auth', authRateLimiter, authRouter);")).toBe(false);
       expect(appTs.includes("app.use('/email', emailRouter);")).toBe(false);
+      expect(appTs.includes('});app.use(notFoundHandler);')).toBe(false);
+      expect(appTs.includes('\n\n  app.use(notFoundHandler);')).toBe(true);
     } finally {
       await rm(projectDir, { recursive: true, force: true });
     }

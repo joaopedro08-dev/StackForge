@@ -156,8 +156,8 @@ async function disableAuthRoutes(destinationProjectDir) {
     const appUpdated = appRaw
       .replace(/^import \{ authRateLimiter \} from '\.\/middlewares\/rate-limit\.middleware\.js';\r?\n/m, '')
       .replace(/^import \{ authRouter \} from '\.\/modules\/auth\/auth\.routes\.js';\r?\n/m, '')
-      .replace(/^\s*if \(\['rest', 'hybrid'\]\.includes\(env\.API_STYLE\)\) \{\r?\n\s*app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n\s*\}\r?\n/m, '')
-      .replace(/^\s*app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n/m, '');
+      .replace(/^[ \t]*if \(\['rest', 'hybrid'\]\.includes\(env\.API_STYLE\)\) \{\r?\n[ \t]*app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n[ \t]*\}\r?\n/m, '')
+      .replace(/^[ \t]*app\.use\('\/auth', authRateLimiter, authRouter\);\r?\n/m, '');
 
     if (appUpdated !== appRaw) {
       await writeFile(appPath, appUpdated, 'utf8');
@@ -331,7 +331,26 @@ async function disableEmailRoutes(destinationProjectDir) {
     const appRaw = await readFile(appPath, 'utf8');
     const appUpdated = appRaw
       .replace(/^import \{ emailRouter \} from '\.\/modules\/email\/email\.routes\.js';\r?\n/m, '')
-      .replace(/\s*if \(env\.EMAIL_ENABLED\) \{\s*app\.use\('\/email', emailRouter\);\s*\}\s*/gm, '');
+      .replace(/^[ \t]*if \(env\.EMAIL_ENABLED\) \{\r?\n[ \t]*app\.use\('\/email', emailRouter\);\r?\n[ \t]*\}\r?\n/m, '');
+
+    if (appUpdated !== appRaw) {
+      await writeFile(appPath, appUpdated, 'utf8');
+    }
+  }
+}
+
+async function normalizeAppTerminalMiddlewareSpacing(destinationProjectDir) {
+  const appCandidates = [path.join(destinationProjectDir, 'src', 'app.js'), path.join(destinationProjectDir, 'src', 'app.ts')];
+
+  for (const appPath of appCandidates) {
+    const appStat = await stat(appPath).catch(() => null);
+
+    if (!appStat?.isFile()) {
+      continue;
+    }
+
+    const appRaw = await readFile(appPath, 'utf8');
+    const appUpdated = appRaw.replace(/\}\);(?:\r?\n[ \t]*)*app\.use\(notFoundHandler\);/g, '});\n\n  app.use(notFoundHandler);');
 
     if (appUpdated !== appRaw) {
       await writeFile(appPath, appUpdated, 'utf8');
@@ -549,6 +568,7 @@ export async function configureGeneratedFeatures(destinationProjectDir, featureS
   await updateReadmeGraphQlSection(destinationProjectDir, graphQlEnabled);
   await updateReadmeEmailSection(destinationProjectDir, emailEnabled);
   await pruneGeneratedDirectories(destinationProjectDir);
+  await normalizeAppTerminalMiddlewareSpacing(destinationProjectDir);
 
   await updateReadmeFeatureSection(destinationProjectDir, featureSet);
 }
