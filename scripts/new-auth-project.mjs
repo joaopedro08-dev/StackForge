@@ -11,6 +11,7 @@ import {
 import { copyPath } from './new-auth-project/filesystem.mjs';
 import {
   customizeGeneratedPackageJson,
+  finalizeGeneratedPackageJson,
   normalizeDockerfileStartCommand,
   removeGeneratedScaffoldRuntime,
 } from './new-auth-project/project-template.mjs';
@@ -160,6 +161,18 @@ async function main() {
 
   await runScaffoldStep(`configure_package_manager:${packageManager}`, async () => {
     await configureGeneratedPackageManager(destinationProjectDir, packageManager);
+  });
+
+  await runScaffoldStep('finalize_package_json', async () => {
+    await finalizeGeneratedPackageJson(destinationProjectDir, {
+      projectName,
+      language,
+      database,
+      architecture,
+      apiStyle,
+      featureSet,
+      rateLimitingEnabled: featureSet === 'auth' || featureSet === 'both',
+    });
   });
 
   await runScaffoldStep('update_dynamic_readme_summary', async () => {

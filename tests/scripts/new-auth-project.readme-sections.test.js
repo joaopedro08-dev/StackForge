@@ -36,6 +36,26 @@ async function generateProjectReadme(prefix, args) {
   }
 }
 
+async function generateProjectPackageJson(prefix, args) {
+  const projectName = buildProjectName(prefix);
+  const projectDir = path.join(projectsRootDir, projectName);
+
+  try {
+    await execFileAsync(process.execPath, [generatorPath, '--', projectName, ...args], {
+      cwd: rootDir,
+      env: process.env,
+    });
+
+    const packageJsonRaw = await readFile(path.join(projectDir, 'package.json'), 'utf8');
+    return {
+      projectName,
+      packageJson: JSON.parse(packageJsonRaw),
+    };
+  } finally {
+    await rm(projectDir, { recursive: true, force: true });
+  }
+}
+
 describe('new-auth-project README conditional sections', () => {
   it('includes only auth section for features=auth and api=rest', async () => {
     const readme = await generateProjectReadme('readme-auth-rest', [
@@ -188,5 +208,98 @@ describe('new-auth-project README conditional sections', () => {
     } finally {
       await rm(projectDir, { recursive: true, force: true });
     }
-  });
+  }, 20_000);
+});
+
+describe('new-auth-project package.json conditional filtering', () => {
+  it('keeps only json/rest/none dependencies and removes internal scripts', async () => {
+    const { projectName, packageJson } = await generateProjectPackageJson('pkg-none-json-rest', [
+      '--features=none',
+      '--db=json',
+      '--api=rest',
+      '--lang=javascript',
+      '--profile=lite',
+    ]);
+
+    expect(packageJson.dependencies.lowdb).toBeDefined();
+    expect(packageJson.dependencies.bcryptjs).toBeUndefined();
+    expect(packageJson.dependencies['cookie-parser']).toBeUndefined();
+    expect(packageJson.dependencies.jsonwebtoken).toBeUndefined();
+    expect(packageJson.dependencies['express-rate-limit']).toBeUndefined();
+    expect(packageJson.dependencies['@prisma/client']).toBeUndefined();
+    expect(packageJson.dependencies.prisma).toBeUndefined();
+    expect(packageJson.dependencies.nodemailer).toBeUndefined();
+    expect(packageJson.dependencies.graphql).toBeUndefined();
+    expect(packageJson.dependencies['@apollo/server']).toBeUndefined();
+    expect(packageJson.dependencies['@as-integrations/express5']).toBeUndefined();
+    expect(packageJson.dependencies.archiver).toBeUndefined();
+
+    expect(packageJson.scripts['prisma:generate']).toBeUndefined();
+    expect(packageJson.scripts['prisma:migrate']).toBeUndefined();
+    expect(packageJson.scripts['prisma:deploy']).toBeUndefined();
+    expect(packageJson.scripts['prisma:push']).toBeUndefined();
+    expect(packageJson.scripts['prisma:bootstrap']).toBeUndefined();
+    expect(packageJson.scripts['test:scaffold:readme']).toBeUndefined();
+    expect(packageJson.scripts['test:scaffold:arch-api']).toBeUndefined();
+    expect(packageJson.scripts['test:scaffold:full-runtime']).toBeUndefined();
+
+    expect(packageJson.description).toContain(projectName);
+    expect(packageJson.description).toContain('rest');
+    expect(packageJson.description).toContain('json');
+    expect(packageJson.keywords).toContain('rest');
+    expect(packageJson.keywords).toContain('json');
+    expect(packageJson.keywords).toContain('lowdb');
+  }, 20_000);
+
+  it('keeps auth dependencies and auth-related types only when auth is enabled', async () => {
+    const { packageJson } = await generateProjectPackageJson('pkg-auth-json-ts', [
+      '--features=auth',
+      '--db=json',
+      '--api=rest',
+      '--lang=typescript',
+      '--profile=lite',
+    ]);
+
+    expect(packageJson.dependencies.bcryptjs).toBeDefined();
+    expect(packageJson.dependencies['cookie-parser']).toBeDefined();
+    expect(packageJson.dependencies.jsonwebtoken).toBeDefined();
+    expect(packageJson.dependencies['express-rate-limit']).toBeDefined();
+    expect(packageJson.devDependencies['@types/cookie-parser']).toBeDefined();
+    expect(packageJson.devDependencies['@types/jsonwebtoken']).toBeDefined();
+
+    expect(packageJson.dependencies.lowdb).toBeDefined();
+    expect(packageJson.dependencies['@prisma/client']).toBeUndefined();
+    expect(packageJson.dependencies.prisma).toBeUndefined();
+    expect(packageJson.dependencies.nodemailer).toBeUndefined();
+    expect(packageJson.dependencies.graphql).toBeUndefined();
+  }, 20_000);
+
+  it('keeps prisma, email and graphql dependencies only when selected', async () => {
+    const { packageJson } = await generateProjectPackageJson('pkg-both-postgres-hybrid', [
+      '--features=both',
+      '--db=postgresql',
+      '--api=hybrid',
+      '--lang=typescript',
+      '--profile=lite',
+    ]);
+
+    expect(packageJson.dependencies.lowdb).toBeUndefined();
+    expect(packageJson.dependencies['@prisma/client']).toBeDefined();
+    expect(packageJson.dependencies.prisma).toBeDefined();
+    expect(packageJson.dependencies.nodemailer).toBeDefined();
+    expect(packageJson.dependencies.graphql).toBeDefined();
+    expect(packageJson.dependencies['@apollo/server']).toBeDefined();
+    expect(packageJson.dependencies['@as-integrations/express5']).toBeDefined();
+    expect(packageJson.dependencies.archiver).toBeUndefined();
+
+    expect(packageJson.scripts['prisma:generate']).toBeDefined();
+    expect(packageJson.scripts['prisma:migrate']).toBeDefined();
+    expect(packageJson.scripts['prisma:deploy']).toBeDefined();
+    expect(packageJson.scripts['prisma:push']).toBeDefined();
+    expect(packageJson.scripts['prisma:bootstrap']).toBeDefined();
+
+    expect(packageJson.scripts['test:scaffold:readme']).toBeUndefined();
+    expect(packageJson.scripts['test:scaffold:arch-api']).toBeUndefined();
+    expect(packageJson.scripts['test:scaffold:full-runtime']).toBeUndefined();
+  }, 20_000);
 });
