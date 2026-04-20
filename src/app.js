@@ -15,14 +15,6 @@ import { emailRouter } from './modules/email/email.routes.js';
 import { scaffoldRouter } from './modules/scaffold/scaffold.routes.js';
 import { initializeDownloadsManager } from './modules/scaffold/downloads-manager.js';
 
-export function createApp() {
-  const app = express();
-
-  // Initialize downloads manager
-  const downloadsDir = path.resolve(process.cwd(), 'web', 'public', 'downloads');
-  initializeDownloadsManager(downloadsDir);
-  app.locals.downloadsDir = downloadsDir;
-
 function resolveOpenApiDocument() {
   if (env.EMAIL_ENABLED) {
     return openApiDocument;
@@ -32,6 +24,14 @@ function resolveOpenApiDocument() {
   delete clonedDocument.paths['/email/send'];
   return clonedDocument;
 }
+
+export function createApp() {
+  const app = express();
+
+  // Initialize downloads manager
+  const downloadsDir = path.resolve(process.cwd(), 'web', 'public', 'downloads');
+  initializeDownloadsManager(downloadsDir);
+  app.locals.downloadsDir = downloadsDir;
 
   const corsAllowedOrigins = new Set(env.CORS_ALLOWED_ORIGINS);
 

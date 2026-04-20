@@ -13,9 +13,13 @@ async function writeFileIfMissing(filePath, content) {
 async function scaffoldMvcGuidanceFiles(destinationProjectDir) {
   const controllersDir = path.join(destinationProjectDir, 'src', 'controllers');
   const modelsDir = path.join(destinationProjectDir, 'src', 'models');
+  const routesDir = path.join(destinationProjectDir, 'src', 'routes');
+  const viewsDir = path.join(destinationProjectDir, 'src', 'views');
 
   await writeFileIfMissing(path.join(controllersDir, '.gitkeep'), '');
   await writeFileIfMissing(path.join(modelsDir, '.gitkeep'), '');
+  await writeFileIfMissing(path.join(routesDir, '.gitkeep'), '');
+  await writeFileIfMissing(path.join(viewsDir, '.gitkeep'), '');
 
   await writeFileIfMissing(
     path.join(controllersDir, 'README.md'),
@@ -44,12 +48,66 @@ Typical responsibilities:
   );
 
   await writeFileIfMissing(
+    path.join(routesDir, 'README.md'),
+    `# Routes
+
+Use this folder to compose route modules and attach controllers.
+
+Typical responsibilities:
+- define endpoint paths and HTTP methods
+- attach middlewares and controllers
+- keep route wiring separate from business logic
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(viewsDir, 'README.md'),
+    `# Views
+
+Use this folder for response serializers/presenters.
+
+Typical responsibilities:
+- map internal/domain objects to API response shapes
+- keep output formatting consistent
+- avoid putting business rules in response mappers
+`,
+  );
+
+  await writeFileIfMissing(
     path.join(controllersDir, 'auth.controller.example.js'),
-    `// Example controller: adapt this shape for real endpoints.
-export async function registerExampleController(_req, res, next) {
+    `// Example service stub (replace with a real service module import).
+async function registerExampleService(payload) {
+  return {
+    id: 'example-user-id',
+    name: payload.name,
+    email: String(payload.email ?? '').trim().toLowerCase(),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+// Example presenter (replace with view/presenter from src/views).
+function toUserResponseView(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
+  };
+}
+
+// Example controller: parse input, call service and map output.
+export async function registerExampleController(req, res, next) {
   try {
-    res.status(200).json({
-      message: 'Controller example. Replace with your register flow.',
+    const payload = {
+      name: req.body?.name,
+      email: req.body?.email,
+      password: req.body?.password,
+    };
+
+    const createdUser = await registerExampleService(payload);
+
+    res.status(201).json({
+      user: toUserResponseView(createdUser),
     });
   } catch (error) {
     next(error);
@@ -67,6 +125,34 @@ export function createUserModel(input = {}) {
     name: input.name ?? 'Example User',
     email: String(input.email ?? '').trim().toLowerCase(),
     createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+}
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(routesDir, 'auth.routes.example.js'),
+    `// Example route wiring: attach controller and middlewares.
+import { Router } from 'express';
+import { registerExampleController } from '../controllers/auth.controller.example.js';
+
+const router = Router();
+
+router.post('/auth/register', registerExampleController);
+
+export { router as authExampleRouter };
+`,
+  );
+
+  await writeFileIfMissing(
+    path.join(viewsDir, 'auth.view.example.js'),
+    `// Example response mapper used by controllers.
+export function toAuthUserView(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
   };
 }
 `,
