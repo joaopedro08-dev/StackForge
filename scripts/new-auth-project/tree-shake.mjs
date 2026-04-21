@@ -146,34 +146,6 @@ function removeGraphQlRuntime(source) {
     .replace(/^[ \t]*void mountGraphQLIfEnabled\(app\);\r?\n/m, '');
 }
 
-function ensureGraphQlRuntime(source, language) {
-  if (source.includes('async function mountGraphQLIfEnabled(appInstance)')) {
-    return source;
-  }
-
-  const importExt = getImportExtension(language);
-  const graphQlImportPath = `./graphql/server${importExt}`;
-  const mountFn = `\nasync function mountGraphQLIfEnabled(appInstance) {\n  if (!['graphql', 'hybrid'].includes(env.API_STYLE)) {\n    return;\n  }\n\n  const { mountGraphQLApi } = await import('${graphQlImportPath}');\n  await mountGraphQLApi(appInstance);\n}\n`;
-
-  if (source.includes("import { env } from './config/env")) {
-    return source.replace(/(import \{ env \} from '\.\/config\/env(?:\.js)?';\r?\n)/, `$1${mountFn}`);
-  }
-
-  return `${mountFn}\n${source}`;
-}
-
-function ensureGraphQlInvocation(source) {
-  if (source.includes('void mountGraphQLIfEnabled(app);')) {
-    return source;
-  }
-
-  if (source.includes("app.use(notFoundHandler);")) {
-    return source.replace("app.use(notFoundHandler);", "void mountGraphQLIfEnabled(app);\n\n  app.use(notFoundHandler);");
-  }
-
-  return `${source}\nvoid mountGraphQLIfEnabled(app);\n`;
-}
-
 function normalizeAppSpacing(source) {
   return source
     .replace(/\}\);(?:\r?\n[ \t]*)*app\.use\(notFoundHandler\);/g, '});\n\n  app.use(notFoundHandler);')
@@ -225,6 +197,18 @@ async function updateGeneratedAppRuntime(destinationProjectDir, options) {
 
   let appUpdated = await readFile(appPath, 'utf8');
 
+  if (!emailEnabled) {
+    appUpdated = appUpdated.replace(
+      /\n+(import { emailRouter } from ['"].*email\.routes.*['"];\n?)/g,
+      '\n',
+    );
+  } else if (!appUpdated.includes("import { emailRouter }")) {
+    appUpdated = appUpdated.replace(
+      /(import [^;]+;\n)(?![\s\S]*import )/,
+      `$1import { emailRouter } from './modules/email/email.routes${importExt}';\n`,
+    );
+  }
+
   if (options.architecture === 'clean') {
     appUpdated = appUpdated
       .replace(
@@ -240,7 +224,6 @@ async function updateGeneratedAppRuntime(destinationProjectDir, options) {
   if (!authEnabled) {
     appUpdated = removeAppAuthBlock(appUpdated);
   }
-
   if (!emailEnabled) {
     appUpdated = removeAppEmailBlock(appUpdated);
   }
@@ -248,8 +231,18 @@ async function updateGeneratedAppRuntime(destinationProjectDir, options) {
   if (!graphQlEnabled) {
     appUpdated = removeGraphQlRuntime(appUpdated);
   } else {
-    appUpdated = ensureGraphQlRuntime(appUpdated, options.language);
-    appUpdated = ensureGraphQlInvocation(appUpdated);
+    appUpdated = appUpdated.replace(/^[ \t]*void mountGraphQLIfEnabled\(app\);\s*\n?/gm, '');
+    if (!appUpdated.includes('async function mountGraphQLIfEnabled(appInstance)')) {
+      const importBlockMatch = appUpdated.match(/((?:import [^;]+;\n)+)/);
+      if (importBlockMatch) {
+        const mountFn = `\nasync function mountGraphQLIfEnabled(appInstance) {\n  if (!['graphql', 'hybrid'].includes(env.API_STYLE)) {\n    return;\n  }\n\n  const { mountGraphQLApi } = await import('./graphql/server${importExt}');\n  await mountGraphQLApi(appInstance);\n}\n`;
+        appUpdated = appUpdated.replace(importBlockMatch[0], importBlockMatch[0] + mountFn);
+      }
+    }
+    appUpdated = appUpdated.replace(
+      /(app\.use\(notFoundHandler\);)/,
+      'void mountGraphQLIfEnabled(app);\n\n  $1',
+    );
   }
 
   appUpdated = normalizeAppSpacing(appUpdated);

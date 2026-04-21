@@ -78,7 +78,13 @@ function buildDynamicKeywords(options) {
     keywords.add('graphql');
   }
 
-  return Array.from(keywords);
+  const filtered = Array.from(keywords).filter(
+    (kw) => {
+      if (/^\d{10,}$/.test(kw)) return false;
+      return true;
+    }
+  );
+  return filtered;
 }
 
 export async function customizeGeneratedPackageJson(destinationProjectDir, projectName) {
@@ -166,7 +172,7 @@ export async function finalizeGeneratedPackageJson(destinationProjectDir, option
   } else {
     removeDependencyEverywhere(packageJson, 'lowdb');
     ensureDependencyField(packageJson, 'dependencies', '@prisma/client', defaultDependencyVersions['@prisma/client']);
-    ensureDependencyField(packageJson, 'dependencies', 'prisma', defaultDependencyVersions.prisma);
+    ensureDependencyField(packageJson, 'devDependencies', 'prisma', defaultDependencyVersions.prisma);
   }
 
   if (emailEnabled) {
@@ -221,7 +227,7 @@ export async function removeGeneratedScaffoldRuntime(destinationProjectDir) {
 
     const appRaw = await readFile(appPath, 'utf8');
     const appUpdated = appRaw
-      .replace(/^import path from 'node:path';\r?\n/m, '')
+      .replace(/import\s+path\s+from\s+['"]node:path['"];?\r?\n/, '')
       .replace(/^import \{ initializeDownloadsManager \} from '\.\/modules\/scaffold\/downloads-manager\.js';\r?\n/m, '')
       .replace(/^import \{ scaffoldRouter \} from '\.\/modules\/scaffold\/scaffold\.routes\.js';\r?\n/m, '')
       .replace(/^\s*\/\/ Initialize downloads manager\r?\n/m, '')

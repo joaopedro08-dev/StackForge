@@ -61,7 +61,9 @@ async function updateGeneratedPackageJsonDatabaseSettings(destinationProjectDir,
     delete packageJson.dependencies['@prisma/client'];
   }
 
-  await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+  const indent = packageJsonRaw.match(/^(\s+)"/m)?.[1] ?? '  ';
+  await writeFile(packageJsonPath,
+    `${JSON.stringify(packageJson, null, indent)}\n`, 'utf8');
 }
 
 async function updateGeneratedDockerfileDatabaseStartup(destinationProjectDir, databaseProvider) {
@@ -129,6 +131,5 @@ export async function configureGeneratedDatabase(destinationProjectDir, database
   await updateGeneratedEnvFiles(destinationProjectDir, databaseProvider);
   await updateGeneratedPackageJsonDatabaseSettings(destinationProjectDir, databaseProvider);
   await updateGeneratedDockerfileDatabaseStartup(destinationProjectDir, databaseProvider);
-
   await updateGeneratedPrismaSchemaProvider(destinationProjectDir, databaseProvider);
 }
